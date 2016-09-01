@@ -1,27 +1,27 @@
-/* ADCS simulation driver
- * Mark Rivers
- * Feb. 28, 2016
+/* SIS8300.cpp
+ *
+ * This is a driver for a Struck SIS8300 digitizer.
+ * Based on ADCSimDetector ADExample.
+ *
+ * Author: Hinko Koceavar
+ *         ESS ERIC, Lund, Sweden
+ *
+ * Created:  September 11, 2016
+ *
  */
 
 #include <epicsEvent.h>
 #include <epicsTime.h>
 #include "asynNDArrayDriver.h"
 
-#define SimAcquireString        "SIM_ACQUIRE"
-#define SimAcquireTimeString    "SIM_ACQUIRE_TIME"
-#define SimElapsedTimeString    "SIM_ELAPSED_TIME"
-#define SimTimeStepString       "SIM_TIME_STEP"
-#define SimNumTimePointsString  "SIM_NUM_TIME_POINTS"
-#define SimAmplitudeString      "SIM_AMPLITUDE"
-#define SimOffsetString         "SIM_OFFSET"
-#define SimPeriodString         "SIM_PERIOD"
-#define SimFrequencyString      "SIM_FREQUENCY"
-#define SimPhaseString          "SIM_PHASE"
-#define SimNoiseString          "SIM_NOISE"
+#define SisAcquireString        "SIS_ACQUIRE"
+#define SisAcquireTimeString    "SIS_ACQUIRE_TIME"
+#define SisElapsedTimeString    "SIS_ELAPSED_TIME"
+#define SisNumTimePointsString  "SIS_NUM_TIME_POINTS"
 
 #define MAX_SIGNALS 10
 
-/** ADC simulation driver; does 1-D waveforms on 8 channels. 
+/** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
   * Inherits from asynNDArrayDriver */
 class epicsShareClass SIS8300 : public asynNDArrayDriver {
 public:
@@ -32,28 +32,24 @@ public:
     /* These are the methods that we override from asynNDArrayDriver */
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     virtual void report(FILE *fp, int details);
-    void simTask(); /**< Should be private, but gets called from C, so must be public */
+    /**< Should be private, but gets called from C, so must be public */
+    void sisTask();
 
 protected:
     int P_Acquire;
     #define FIRST_SIS8300_PARAM P_Acquire
     int P_AcquireTime;
     int P_ElapsedTime;
-    int P_TimeStep;
     int P_NumTimePoints;
-    int P_Period;
-    int P_Amplitude;
-    int P_Offset;
-    int P_Frequency;
-    int P_Phase;
-    int P_Noise;
-    #define LAST_SIS8300_PARAM P_Noise
+
+    int P_Dummy;
+    #define LAST_SIS8300_PARAM P_Dummy
 
 
 private:
     /* These are the methods that are new to this class */
-    template <typename epicsType> void computeArraysT();
-    void computeArrays();
+    template <typename epicsType> int acquireArraysT();
+    int acquireArrays();
     void setAcquire(int value);
 
     /* Our data */

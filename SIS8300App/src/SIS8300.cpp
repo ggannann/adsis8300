@@ -1,6 +1,7 @@
 /* SIS8300.cpp
  *
  * This is a driver for a Struck SIS8300 digitizer.
+ * Based on ADCSimDetector ADExample.
  *
  * Author: Hinko Koceavar
  *         ESS ERIC, Lund, Sweden
@@ -10,8 +11,17 @@
  */
 
 
-#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
 #include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <assert.h>
 
 #include <epicsTime.h>
 #include <epicsThread.h>
@@ -24,16 +34,10 @@
 
 static const char *driverName = "SIS8300";
 
-// Some systems don't define M_PI in math.h
-#ifndef M_PI
-  #define M_PI 3.14159265358979323846
-#endif
-
-static void simTaskC(void *drvPvt)
+static void sisTaskC(void *drvPvt)
 {
     SIS8300 *pPvt = (SIS8300 *)drvPvt;
-
-    pPvt->simTask();
+    pPvt->sisTask();
 }
 
 /** Constructor for SIS8300; most parameters are simply passed to ADDriver::ADDriver.
@@ -63,7 +67,8 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
     int status = asynSuccess;
     const char *functionName = "SIS8300";
 
-    /* Create the epicsEvents for signaling to the simulate task when acquisition starts and stops */
+    /* Create the epicsEvents for signaling to the acquisition
+     * task when acquisition starts and stops */
     this->startEventId_ = epicsEventCreate(epicsEventEmpty);
     if (!this->startEventId_) {
         printf("%s:%s epicsEventCreate failure for start event\n",
@@ -77,26 +82,13 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
         return;
     }
 
-    createParam(SimAcquireString,         asynParamInt32, &P_Acquire);
-    createParam(SimAcquireTimeString,   asynParamFloat64, &P_AcquireTime);
-    createParam(SimElapsedTimeString,   asynParamFloat64, &P_ElapsedTime);
-    createParam(SimTimeStepString,      asynParamFloat64, &P_TimeStep);
-    createParam(SimNumTimePointsString,   asynParamInt32, &P_NumTimePoints);
-    createParam(SimPeriodString,        asynParamFloat64, &P_Period);
-    createParam(SimAmplitudeString,     asynParamFloat64, &P_Amplitude);
-    createParam(SimOffsetString,        asynParamFloat64, &P_Offset);
-    createParam(SimFrequencyString,     asynParamFloat64, &P_Frequency);
-    createParam(SimPhaseString,         asynParamFloat64, &P_Phase);
-    createParam(SimNoiseString,         asynParamFloat64, &P_Noise);
+    createParam(SisAcquireString,         asynParamInt32, &P_Acquire);
+    createParam(SisAcquireTimeString,   asynParamFloat64, &P_AcquireTime);
+    createParam(SisElapsedTimeString,   asynParamFloat64, &P_ElapsedTime);
+    createParam(SisNumTimePointsString,   asynParamInt32, &P_NumTimePoints);
 
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
-    status |= setDoubleParam(P_TimeStep, 0.001);
-    status |= setDoubleParam(P_Amplitude, 1.0);
-    status |= setDoubleParam(P_Offset,    0.0);
-    status |= setDoubleParam(P_Period,    1.0);
-    status |= setDoubleParam(P_Phase,     0.0);
-    status |= setDoubleParam(P_Noise,     0.0);
 
     if (status) {
         printf("%s: unable to set parameters\n", functionName);
@@ -104,39 +96,31 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
     }
 
     /* Create the thread that updates the images */
-    status = (epicsThreadCreate("SimDetTask",
+    status = (epicsThreadCreate("SisTask",
                                 epicsThreadPriorityMedium,
                                 epicsThreadGetStackSize(epicsThreadStackMedium),
-                                (EPICSTHREADFUNC)simTaskC,
+                                (EPICSTHREADFUNC)sisTaskC,
                                 this) == NULL);
     if (status) {
-        printf("%s:%s epicsThreadCreate failure for simulation task\n",
+        printf("%s:%s epicsThreadCreate failure for acquisition task\n",
             driverName, functionName);
         return;
     }
+
+	printf("%s:%s: Init done...\n", driverName, functionName);
 }
 
 /** Template function to compute the simulated detector data for any data type */
-template <typename epicsType> void SIS8300::computeArraysT()
+template <typename epicsType> int SIS8300::acquireArraysT()
 {
     size_t dims[2];
     int numTimePoints;
-    int i, j;
     NDDataType_t dataType;
     epicsType *pData;
     double acquireTime;
-    double timeStep;
-    double rndm;
-    double amplitude[MAX_SIGNALS];
-    double period[MAX_SIGNALS];
-    double frequency[MAX_SIGNALS];
-    double phase[MAX_SIGNALS];
-    double noise[MAX_SIGNALS];
-    double offset[MAX_SIGNALS];
     
     getIntegerParam(NDDataType, (int *)&dataType);
     getIntegerParam(P_NumTimePoints, &numTimePoints);
-    getDoubleParam(P_TimeStep, &timeStep);
     getDoubleParam(P_AcquireTime, &acquireTime);
 
     dims[0] = MAX_SIGNALS;
@@ -147,97 +131,46 @@ template <typename epicsType> void SIS8300::computeArraysT()
     pData = (epicsType *)this->pArrays[0]->pData;
     memset(pData, 0, MAX_SIGNALS * numTimePoints * sizeof(epicsType));
 
-    for (j=0; j<MAX_SIGNALS; j++) {
-        getDoubleParam(j, P_Amplitude, amplitude+j);
-        getDoubleParam(j, P_Offset,    offset+j);
-        getDoubleParam(j, P_Period,    period+j);
-        frequency[j] = 1. / period[j];
-        setDoubleParam(j, P_Frequency, frequency[j]);
-        getDoubleParam(j, P_Phase,     phase+j);
-        getDoubleParam(j, P_Noise,     noise+j);
-        phase[j] = phase[j]/360.0;
-    }
-    for (i=0; i<numTimePoints; i++) {
-        rndm = 2.*(rand()/(double)RAND_MAX - 0.5);
-        // Signal 0 is a sin wave
-        j = 0;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * 
-                                               sin((elapsedTime_ * frequency[j] + phase[j]) * 2. * M_PI));
-        // Signal 1 is a cos wave
-        j = 1;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * 
-                                               cos((elapsedTime_ * frequency[j] + phase[j]) * 2. * M_PI));
-        // Signal 2 is a square wave
-        j = 2;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * 
-                                              (sin((elapsedTime_ * frequency[j] + phase[j]) * 2. * M_PI) > 0 ? 1.0 : -1.0));
-        // Signal 3 is a sawtooth
-        j = 3;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * 
-                                               -2.0/M_PI * atan(1./tan((elapsedTime_ * frequency[j] + phase[j]) * M_PI)));
-        // Signal 4 is white noise
-        j = 4;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * rndm);
+    /* XXX: Implement data acquisition */
+    sleep(2);
 
-        // Signal 5 is signal 0 + signal 1
-        j = 5;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * 
-                                               pData[MAX_SIGNALS*i + 0] + pData[MAX_SIGNALS*i + 1]) ;
-
-        // Signal 6 is signal 0 * signal 1
-        j = 6;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] * 
-                                               pData[MAX_SIGNALS*i + 0] * pData[MAX_SIGNALS*i + 1]) ;
-
-        // Signal 7 is 4 sin waves
-        j = 7;
-        pData[MAX_SIGNALS*i + j] = (epicsType)(offset[j] + noise[j] * rndm + amplitude[j] *
-                                              (sin((elapsedTime_ * 1.*frequency[j] + phase[j]) * 2. * M_PI) +
-                                               sin((elapsedTime_ * 2.*frequency[j] + phase[j]) * 2. * M_PI) +
-                                               sin((elapsedTime_ * 3.*frequency[j] + phase[j]) * 2. * M_PI) +
-                                               sin((elapsedTime_ * 4.*frequency[j] + phase[j]) * 2. * M_PI)));
-
-        elapsedTime_ += timeStep;
-        if ((acquireTime > 0) && (elapsedTime_ > acquireTime)) {
-            setAcquire(0);
-            setIntegerParam(P_Acquire, 0);
-            break;
-        }
-    }
-    setDoubleParam(P_ElapsedTime, elapsedTime_);
+    return 0;
 }
 
 /** Computes the new image data */
-void SIS8300::computeArrays()
+int SIS8300::acquireArrays()
 {
     int dataType;
     getIntegerParam(NDDataType, &dataType); 
 
     switch (dataType) {
         case NDInt8:
-            computeArraysT<epicsInt8>();
+            return acquireArraysT<epicsInt8>();
             break;
         case NDUInt8:
-            computeArraysT<epicsUInt8>();
+        	return acquireArraysT<epicsUInt8>();
             break;
         case NDInt16:
-            computeArraysT<epicsInt16>();
+        	return acquireArraysT<epicsInt16>();
             break;
         case NDUInt16:
-            computeArraysT<epicsUInt16>();
+        	return acquireArraysT<epicsUInt16>();
             break;
         case NDInt32:
-            computeArraysT<epicsInt32>();
+        	return acquireArraysT<epicsInt32>();
             break;
         case NDUInt32:
-            computeArraysT<epicsUInt32>();
+        	return acquireArraysT<epicsUInt32>();
             break;
         case NDFloat32:
-            computeArraysT<epicsFloat32>();
+        	return acquireArraysT<epicsFloat32>();
             break;
         case NDFloat64:
-            computeArraysT<epicsFloat64>();
+        	return acquireArraysT<epicsFloat64>();
             break;
+        default:
+        	return -1;
+        	break;
     }
 }
 
@@ -256,25 +189,44 @@ void SIS8300::setAcquire(int value)
 
 /** This thread calls computeImage to compute new image data and does the callbacks to send it to higher layers.
   * It implements the logic for single, multiple or continuous acquisition. */
-void SIS8300::simTask()
+void SIS8300::sisTask()
 {
     int status = asynSuccess;
     NDArray *pImage;
     epicsTimeStamp startTime;
-    int numTimePoints;
+    epicsTimeStamp frameTime;
+//    int numTimePoints;
     int arrayCounter;
-    double timeStep;
+//    double timeStep;
     int i;
-    const char *functionName = "simTask";
+    double elapsed;
+    const char *functionName = "sisTask";
+
+	sleep(1);
 
     this->lock();
-    /* Loop forever */
+
+//	if (mHandle == -1) {
+//		printf("%s:%s: Data thread will not start...\n", driverName, functionName);
+//		this->unlock();
+//		return;
+//	}
+
+	printf("%s:%s: Data thread started...\n", driverName, functionName);
+
+	startTime.secPastEpoch = 0;
+	startTime.nsec = 0;
+
+	/* Loop forever */
     while (1) {
         /* Has acquisition been stopped? */
         status = epicsEventTryWait(this->stopEventId_);
         if (status == epicsEventWaitOK) {
             acquiring_ = 0;
+            startTime.secPastEpoch = 0;
+            startTime.nsec = 0;
         }
+        printf("%s: 1 Acquring = %d..\n", __func__, acquiring_);
        
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
@@ -287,9 +239,10 @@ void SIS8300::simTask()
             acquiring_ = 1;
             elapsedTime_ = 0.0;
         }
+        printf("%s: 2 Acquring = %d..\n", __func__, acquiring_);
 
-        /* Update the data */
-        computeArrays();
+        /* Get the data */
+        acquireArrays();
 
         pImage = this->pArrays[0];
 
@@ -298,9 +251,15 @@ void SIS8300::simTask()
         getIntegerParam(NDArrayCounter, &arrayCounter);
         arrayCounter++;
         setIntegerParam(NDArrayCounter, arrayCounter);
-        epicsTimeGetCurrent(&startTime);
-        pImage->timeStamp = startTime.secPastEpoch + startTime.nsec / 1.e9;
+        epicsTimeGetCurrent(&frameTime);
+        pImage->timeStamp = frameTime.secPastEpoch + frameTime.nsec / 1.e9;
         updateTimeStamp(&pImage->epicsTS);
+        if (startTime.secPastEpoch == 0) {
+        	startTime = frameTime;
+        }
+        elapsed = (double)(frameTime.secPastEpoch + frameTime.nsec / 1.e9) -
+        		(double)(startTime.secPastEpoch + startTime.nsec / 1.e9);
+        setDoubleParam(P_ElapsedTime, elapsed);
 
         /* Get any attributes that have been defined for this driver */
         this->getAttributes(pImage->pAttributeList);
@@ -316,14 +275,9 @@ void SIS8300::simTask()
         for (i=0; i<MAX_SIGNALS; i++) {
             callParamCallbacks(i);
         }
-
-        /* Sleep for numTimePoint * timeStep seconds */
-        getIntegerParam(P_NumTimePoints, &numTimePoints);
-        getDoubleParam(P_TimeStep, &timeStep);
-        unlock();
-        epicsThreadSleep(numTimePoints * timeStep);
-        lock();
     }
+
+	printf("Data thread is down!\n");
 }
 
 /** Called when asyn clients call pasynInt32->write().
@@ -342,6 +296,8 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
     status = setIntegerParam(addr, function, value);
+
+    printf("%s: ENTER %d (%d) = %d\n", __func__, function, addr, value);
 
     if (function == P_Acquire) {
         setAcquire(value);
@@ -374,7 +330,7 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 void SIS8300::report(FILE *fp, int details)
 {
 
-    fprintf(fp, "ADC simulation detector %s\n", this->portName);
+    fprintf(fp, "Struck SIS8300 %s\n", this->portName);
     if (details > 0) {
         int numTimePoints, dataType;
         getIntegerParam(P_NumTimePoints, &numTimePoints);
