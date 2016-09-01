@@ -57,10 +57,12 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
                                int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName, MAX_SIGNALS, NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
-               0, 0, /* No interfaces beyond those set in ADDriver.cpp */
-               ASYN_CANBLOCK | ASYN_MULTIDEVICE, /* asyn flags*/
-               1,                                /* autoConnect=1 */
-               priority, stackSize),
+    		asynFloat32ArrayMask,
+			asynFloat32ArrayMask,
+			ASYN_CANBLOCK | ASYN_MULTIDEVICE, /* asyn flags*/
+			1,                                /* autoConnect=1 */
+			priority,
+			stackSize),
     uniqueId_(0), acquiring_(0)
 
 {
@@ -82,10 +84,25 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
         return;
     }
 
-    createParam(SisAcquireString,         asynParamInt32, &P_Acquire);
-    createParam(SisAcquireTimeString,   asynParamFloat64, &P_AcquireTime);
-    createParam(SisElapsedTimeString,   asynParamFloat64, &P_ElapsedTime);
-    createParam(SisNumTimePointsString,   asynParamInt32, &P_NumTimePoints);
+    createParam(SisAcquireString,               asynParamInt32, &P_Acquire);
+    createParam(SisAcquireTimeString,         asynParamFloat64, &P_AcquireTime);
+    createParam(SisElapsedTimeString,         asynParamFloat64, &P_ElapsedTime);
+    createParam(SisNumTimePointsString,         asynParamInt32, &P_NumTimePoints);
+    createParam(SisCountString,                 asynParamInt32, &P_Count);
+    createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
+    createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
+    createParam(SisClockDivString,              asynParamInt32, &P_ClockDiv);
+    createParam(SisTrigSourceString,            asynParamInt32, &P_TrigSource);
+    createParam(SisTrigDoString,                asynParamInt32, &P_TrigDo);
+    createParam(SisTrigDelayString,             asynParamInt32, &P_TrigDelay);
+    createParam(SisTrigRepeatString,            asynParamInt32, &P_TrigRepeat);
+    createParam(SisChannelEnableString,         asynParamInt32, &P_Enable);
+    createParam(SisChannelDataString,    asynParamFloat32Array, &P_Data);
+    createParam(SisChannelConvFactorString,   asynParamFloat64, &P_ConvFactor);
+    createParam(SisChannelConvOffsetString,   asynParamFloat64, &P_ConvOffset);
+    createParam(SisChannelAttenuationString,  asynParamFloat64, &P_Attenuation);
+    createParam(SisChannelDecimFactorString,    asynParamInt32, &P_DecimFactor);
+    createParam(SisChannelDecimOffsetString,    asynParamInt32, &P_DecimOffset);
 
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
@@ -132,7 +149,11 @@ template <typename epicsType> int SIS8300::acquireArraysT()
     memset(pData, 0, MAX_SIGNALS * numTimePoints * sizeof(epicsType));
 
     /* XXX: Implement data acquisition */
+
+    // XXX: Remove once data acquisition added
+    this->unlock();
     sleep(2);
+    this->lock();
 
     return 0;
 }
@@ -281,7 +302,7 @@ void SIS8300::sisTask()
 }
 
 /** Called when asyn clients call pasynInt32->write().
-  * This function performs actions for some parameters, including ADAcquire, ADColorMode, etc.
+  * This function performs actions for some parameters.
   * For all parameters it sets the value in the parameter library and calls any registered callbacks..
   * \param[in] pasynUser pasynUser structure that encodes the reason and address.
   * \param[in] value Value to write. */
@@ -292,12 +313,11 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
+    printf("%s: ENTER %d (%d) = %d\n", __func__, function, addr, value);
  
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
     status = setIntegerParam(addr, function, value);
-
-    printf("%s: ENTER %d (%d) = %d\n", __func__, function, addr, value);
 
     if (function == P_Acquire) {
         setAcquire(value);
@@ -320,6 +340,44 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     return status;
 }
 
+/** Called when asyn clients call pasynFloat64->write().
+  * This function performs actions for some parameters.
+  * For all parameters it sets the value in the parameter library and calls any registered callbacks..
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Value to write. */
+asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
+{
+    int function = pasynUser->reason;
+    int addr;
+    asynStatus status = asynSuccess;
+
+    getAddress(pasynUser, &addr);
+    printf("%s: ENTER %d (%d) = %f\n", __func__, function, addr, value);
+
+    /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
+     * status at the end, but that's OK */
+    status = setDoubleParam(addr, function, value);
+
+    if (function == P_ClockFreq) {
+        // XXX: Add code
+    } else {
+        /* If this parameter belongs to a base class call its method */
+        if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeFloat64(pasynUser, value);
+    }
+
+    /* Do callbacks so higher layers see any changes */
+    callParamCallbacks(addr);
+
+    if (status)
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+              "%s:writeFloat64 error, status=%d function=%d, value=%f\n",
+              driverName, status, function, value);
+    else
+        asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
+              "%s:writeFloat64: function=%d, value=%f\n",
+              driverName, function, value);
+    return status;
+}
 
 /** Report status of the driver.
   * Prints details about the driver if details>0.

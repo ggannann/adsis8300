@@ -1,5 +1,6 @@
-$(P)$(R)Amplitude
-$(P)$(R)Offset
-$(P)$(R)Period
-$(P)$(R)Phase
-$(P)$(R)Noise
+$(P)$(R)Enable
+$(P)$(R)ConvFactor
+$(P)$(R)ConvOffset
+$(P)$(R)Attenuation
+$(P)$(R)DecimFactor
+$(P)$(R)DecimOffset

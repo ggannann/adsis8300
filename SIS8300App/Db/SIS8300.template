@@ -1,85 +1,489 @@
 #=================================================================#
-# Template file: ADCSDetector.template
-# Database for the records specific to the ADC simulated detector driver
-# Mark Rivers
-# February 28, 2016
+# Template file: SIS8300.template
+# Database for the records specific to the Struck SIS8300 driver
+# Hinko Kocevar
+# September 11, 2016
 
 include "NDArrayBase.template"
 
 record(busy, "$(P)$(R)Acquire")
 {
-   field(PINI, "YES")
-   field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_ACQUIRE")
-   field(ZNAM, "Done")
-   field(ONAM, "Acquire")
-   info(autosaveFields, "VAL")
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ACQUIRE")
+    field(ZNAM, "Done")
+    field(ONAM, "Acquire")
+    info(autosaveFields, "VAL")
 }
 
 record(bi, "$(P)$(R)Acquire_RBV")
 {
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_ACQUIRE")
-   field(ZNAM, "Done")
-   field(ONAM, "Acquire")
-   field(SCAN, "I/O Intr")
-}
-
-record(ao, "$(P)$(R)TimeStep")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_TIME_STEP")
-   field(PREC, "3")
-   info(autosaveFields, "VAL")
-}
-
-record(ai, "$(P)$(R)TimeStep_RBV")
-{
-   field(DTYP, "asynFloat64")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_TIME_STEP")
-   field(PREC, "3")
-   field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ACQUIRE")
+    field(ZNAM, "Done")
+    field(ONAM, "Acquire")
+    field(SCAN, "I/O Intr")
 }
 
 record(longout, "$(P)$(R)NumTimePoints")
 {
-   field(PINI, "YES")
-   field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_NUM_TIME_POINTS")
-   info(autosaveFields, "VAL")
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_NUM_TIME_POINTS")
+    info(autosaveFields, "VAL")
 }
 
 record(longin, "$(P)$(R)NumTimePoints_RBV")
 {
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_NUM_TIME_POINTS")
-   field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_NUM_TIME_POINTS")
+    field(SCAN, "I/O Intr")
 }
 
 record(ao, "$(P)$(R)AcquireTime")
 {
-   field(PINI, "YES")
-   field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_ACQUIRE_TIME")
-   field(PREC, "3")
-   info(autosaveFields, "VAL")
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ACQUIRE_TIME")
+    field(PREC, "3")
+    info(autosaveFields, "VAL")
 }
 
 record(ai, "$(P)$(R)AcquireTime_RBV")
 {
-   field(DTYP, "asynFloat64")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_ACQUIRE_TIME")
-   field(PREC, "3")
-   field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ACQUIRE_TIME")
+    field(PREC, "3")
+    field(SCAN, "I/O Intr")
 }
 
 record(ai, "$(P)$(R)ElapsedTime")
 {
-   field(DTYP, "asynFloat64")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_ELAPSED_TIME")
-   field(PREC, "3")
-   field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ELAPSED_TIME")
+    field(PREC, "3")
+    field(SCAN, "I/O Intr")
 }
+
+record(longout, "$(P)$(R)Count")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_COUNT")
+    field(DRVL, "0")
+    field(VAL,  "$(AINELM)")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)Count_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_COUNT")
+    field(SCAN, "I/O Intr")
+}
+
+record(mbbo, "$(P)$(R)ClockSource") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_SOURCE")
+    field(ZRVL, "0")
+    field(ZRST, "Internal")
+    field(ONVL, "1")
+    field(ONST, "RTM2")
+    field(TWVL, "2")
+    field(TWST, "SMA")
+    field(THVL, "3")
+    field(THST, "Harlink")
+    field(FRVL, "4")
+    field(FRST, "Backplane1")
+    field(FVVL, "5")
+    field(FVST, "Backplane2")
+    field(SXVL, "6")
+    field(SXST, "RTM01")
+    field(PINI, "YES")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)ClockSource_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_SOURCE")
+    field(SCAN, "I/O Intr")
+    field(ZRVL, "0")
+    field(ZRST, "Internal")
+    field(ONVL, "1")
+    field(ONST, "RTM2")
+    field(TWVL, "2")
+    field(TWST, "SMA")
+    field(THVL, "3")
+    field(THST, "Harlink")
+    field(FRVL, "4")
+    field(FRST, "Backplane1")
+    field(FVVL, "5")
+    field(FVST, "Backplane2")
+    field(SXVL, "6")
+    field(SXST, "RTM01")
+}
+
+record(ao, "$(P)$(R)ClockFreq")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_FREQ")
+    field(EGU,  "Hz")
+    field(PREC, "0")
+    field(VAL,  "125000000")
+    info(autosaveFields, "VAL")
+}
+
+record(ai, "$(P)$(R)ClockFreq_RBV")
+{
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_FREQ")
+    field(EGU,  "Hz")
+    field(PREC, "0")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)ClockDiv")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_DIV")
+    field(DRVL, "1")
+    field(DRVH, "32")
+    field(VAL,  "1")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)ClockDiv_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_DIV")
+    field(SCAN, "I/O Intr")
+}
+
+record(mbbo, "$(P)$(R)TrigSource") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_SOURCE")
+    field(ZRVL, "0")
+    field(ZRST, "Software")
+    field(ONVL, "1")
+    field(ONST, "Internal")
+    field(TWVL, "2")
+    field(TWST, "FrontPanel0")
+    field(THVL, "3")
+    field(THST, "FrontPanel1")
+    field(FRVL, "4")
+    field(FRST, "FrontPanel2")
+    field(FVVL, "5")
+    field(FVST, "FrontPanel3")
+    field(SXVL, "6")
+    field(SXST, "BackPlane4")
+    field(SVVL, "7")
+    field(SVST, "BackPlane5")
+    field(EIVL, "8")
+    field(EIST, "BackPlane6")
+    field(NIVL, "9")
+    field(NIST, "BackPlane7")
+    field(TEVL, "10")
+    field(TEST, "BackPlane8")
+    field(ELVL, "11")
+    field(ELST, "BackPlane9")
+    field(TVVL, "12")
+    field(TVST, "BackPlane10")
+    field(TTVL, "13")
+    field(TTST, "BackPlane11")
+    field(PINI, "YES")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)TrigSource_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_SOURCE")
+    field(SCAN, "I/O Intr")
+    field(ZRVL, "0")
+    field(ZRST, "Software")
+    field(ONVL, "1")
+    field(ONST, "Internal")
+    field(TWVL, "2")
+    field(TWST, "FrontPanel0")
+    field(THVL, "3")
+    field(THST, "FrontPanel1")
+    field(FRVL, "4")
+    field(FRST, "FrontPanel2")
+    field(FVVL, "5")
+    field(FVST, "FrontPanel3")
+    field(SXVL, "6")
+    field(SXST, "BackPlane4")
+    field(SVVL, "7")
+    field(SVST, "BackPlane5")
+    field(EIVL, "8")
+    field(EIST, "BackPlane6")
+    field(NIVL, "9")
+    field(NIST, "BackPlane7")
+    field(TEVL, "10")
+    field(TEST, "BackPlane8")
+    field(ELVL, "11")
+    field(ELST, "BackPlane9")
+    field(TVVL, "12")
+    field(TVST, "BackPlane10")
+    field(TTVL, "13")
+    field(TTST, "BackPlane11")
+}
+
+record(bo, "$(P)$(R)TrigDo")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DO")
+    field(ZNAM, "Idle")
+    field(ONAM, "Acquire")
+    info(autosaveFields, "VAL")
+}
+
+record(bi, "$(P)$(R)TrigDo_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DO")
+    field(ZNAM, "Idle")
+    field(ONAM, "Acquire")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)TrigDelay")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DELAY")
+    field(DRVH, "0")
+    field(DRVL, "-2046")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)TrigDelay_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DELAY")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)TrigRepeat")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_REPEAT")
+    field(DRVL, "-1")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)TrigRepeat_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_REPEAT")
+    field(SCAN, "I/O Intr")
+}
+
+
+
+
+
+record(bo, "$(P)$(R)Enable")
+{
+    field(ZNAM, "Disabled")
+    field(ONAM, "Enabled")
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+    field(FLNK, "$(P)$(R)EnableSeq")
+}
+
+record(seq, "$(P)$(R)EnableSeq")
+{
+    field(SELM, "All")
+    field(LNK1, "$(P)$(R)AI1:Enable PP")
+    field(LNK2, "$(P)$(R)AI2:Enable PP")
+    field(LNK3, "$(P)$(R)AI3:Enable PP")
+    field(LNK4, "$(P)$(R)AI4:Enable PP")
+    field(LNK5, "$(P)$(R)AI5:Enable PP")
+    field(LNK6, "$(P)$(R)AI6:Enable PP")
+    field(LNK7, "$(P)$(R)AI7:Enable PP")
+    field(LNK8, "$(P)$(R)AI8:Enable PP")
+    field(LNK9, "$(P)$(R)AI9:Enable PP")
+    field(LNKA, "$(P)$(R)AI10:Enable PP")
+    field(DOL1, "$(P)$(R)Enable")
+    field(DOL2, "$(P)$(R)Enable")
+    field(DOL3, "$(P)$(R)Enable")
+    field(DOL4, "$(P)$(R)Enable")
+    field(DOL5, "$(P)$(R)Enable")
+    field(DOL6, "$(P)$(R)Enable")
+    field(DOL7, "$(P)$(R)Enable")
+    field(DOL8, "$(P)$(R)Enable")
+    field(DOL9, "$(P)$(R)Enable")
+    field(DOLA, "$(P)$(R)Enable")
+}
+
+record(longout, "$(P)$(R)DecimFactor")
+{
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+    field(FLNK, "$(P)$(R)DecimFactorSeq")
+}
+
+record(seq, "$(P)$(R)DecimFactorSeq")
+{
+    field(SELM, "All")
+    field(LNK1, "$(P)$(R)AI1:DecimFactor PP")
+    field(LNK2, "$(P)$(R)AI2:DecimFactor PP")
+    field(LNK3, "$(P)$(R)AI3:DecimFactor PP")
+    field(LNK4, "$(P)$(R)AI4:DecimFactor PP")
+    field(LNK5, "$(P)$(R)AI5:DecimFactor PP")
+    field(LNK6, "$(P)$(R)AI6:DecimFactor PP")
+    field(LNK7, "$(P)$(R)AI7:DecimFactor PP")
+    field(LNK8, "$(P)$(R)AI8:DecimFactor PP")
+    field(LNK9, "$(P)$(R)AI9:DecimFactor PP")
+    field(LNKA, "$(P)$(R)AI10:DecimFactor PP")
+    field(DOL1, "$(P)$(R)DecimFactor")
+    field(DOL2, "$(P)$(R)DecimFactor")
+    field(DOL3, "$(P)$(R)DecimFactor")
+    field(DOL4, "$(P)$(R)DecimFactor")
+    field(DOL5, "$(P)$(R)DecimFactor")
+    field(DOL6, "$(P)$(R)DecimFactor")
+    field(DOL7, "$(P)$(R)DecimFactor")
+    field(DOL8, "$(P)$(R)DecimFactor")
+    field(DOL9, "$(P)$(R)DecimFactor")
+    field(DOLA, "$(P)$(R)DecimFactor")
+}
+
+record(longout, "$(P)$(R)DecimOffset")
+{
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+    field(FLNK, "$(P)$(R)DecimOffsetSeq")
+}
+
+record(seq, "$(P)$(R)DecimOffsetSeq")
+{
+    field(SELM, "All")
+    field(LNK1, "$(P)$(R)AI1:DecimOffset PP")
+    field(LNK2, "$(P)$(R)AI2:DecimOffset PP")
+    field(LNK3, "$(P)$(R)AI3:DecimOffset PP")
+    field(LNK4, "$(P)$(R)AI4:DecimOffset PP")
+    field(LNK5, "$(P)$(R)AI5:DecimOffset PP")
+    field(LNK6, "$(P)$(R)AI6:DecimOffset PP")
+    field(LNK7, "$(P)$(R)AI7:DecimOffset PP")
+    field(LNK8, "$(P)$(R)AI8:DecimOffset PP")
+    field(LNK9, "$(P)$(R)AI9:DecimOffset PP")
+    field(LNKA, "$(P)$(R)AI10:DecimOffset PP")
+    field(DOL1, "$(P)$(R)DecimOffset")
+    field(DOL2, "$(P)$(R)DecimOffset")
+    field(DOL3, "$(P)$(R)DecimOffset")
+    field(DOL4, "$(P)$(R)DecimOffset")
+    field(DOL5, "$(P)$(R)DecimOffset")
+    field(DOL6, "$(P)$(R)DecimOffset")
+    field(DOL7, "$(P)$(R)DecimOffset")
+    field(DOL8, "$(P)$(R)DecimOffset")
+    field(DOL9, "$(P)$(R)DecimOffset")
+    field(DOLA, "$(P)$(R)DecimOffset")
+}
+
+record(ao, "$(P)$(R)ConvFactor")
+{
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+    field(FLNK, "$(P)$(R)ConvFactorSeq")
+}
+
+record(seq, "$(P)$(R)ConvFactorSeq")
+{
+    field(SELM, "All")
+    field(LNK1, "$(P)$(R)AI1:ConvFactor PP")
+    field(LNK2, "$(P)$(R)AI2:ConvFactor PP")
+    field(LNK3, "$(P)$(R)AI3:ConvFactor PP")
+    field(LNK4, "$(P)$(R)AI4:ConvFactor PP")
+    field(LNK5, "$(P)$(R)AI5:ConvFactor PP")
+    field(LNK6, "$(P)$(R)AI6:ConvFactor PP")
+    field(LNK7, "$(P)$(R)AI7:ConvFactor PP")
+    field(LNK8, "$(P)$(R)AI8:ConvFactor PP")
+    field(LNK9, "$(P)$(R)AI9:ConvFactor PP")
+    field(LNKA, "$(P)$(R)AI10:ConvFactor PP")
+    field(DOL1, "$(P)$(R)ConvFactor")
+    field(DOL2, "$(P)$(R)ConvFactor")
+    field(DOL3, "$(P)$(R)ConvFactor")
+    field(DOL4, "$(P)$(R)ConvFactor")
+    field(DOL5, "$(P)$(R)ConvFactor")
+    field(DOL6, "$(P)$(R)ConvFactor")
+    field(DOL7, "$(P)$(R)ConvFactor")
+    field(DOL8, "$(P)$(R)ConvFactor")
+    field(DOL9, "$(P)$(R)ConvFactor")
+    field(DOLA, "$(P)$(R)ConvFactor")
+}
+
+record(ao, "$(P)$(R)ConvOffset")
+{
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+    field(FLNK, "$(P)$(R)ConvOffsetSeq")
+}
+
+record(seq, "$(P)$(R)ConvOffsetSeq")
+{
+    field(SELM, "All")
+    field(LNK1, "$(P)$(R)AI1:ConvOffset PP")
+    field(LNK2, "$(P)$(R)AI2:ConvOffset PP")
+    field(LNK3, "$(P)$(R)AI3:ConvOffset PP")
+    field(LNK4, "$(P)$(R)AI4:ConvOffset PP")
+    field(LNK5, "$(P)$(R)AI5:ConvOffset PP")
+    field(LNK6, "$(P)$(R)AI6:ConvOffset PP")
+    field(LNK7, "$(P)$(R)AI7:ConvOffset PP")
+    field(LNK8, "$(P)$(R)AI8:ConvOffset PP")
+    field(LNK9, "$(P)$(R)AI9:ConvOffset PP")
+    field(LNKA, "$(P)$(R)AI10:ConvOffset PP")
+    field(DOL1, "$(P)$(R)ConvOffset")
+    field(DOL2, "$(P)$(R)ConvOffset")
+    field(DOL3, "$(P)$(R)ConvOffset")
+    field(DOL4, "$(P)$(R)ConvOffset")
+    field(DOL5, "$(P)$(R)ConvOffset")
+    field(DOL6, "$(P)$(R)ConvOffset")
+    field(DOL7, "$(P)$(R)ConvOffset")
+    field(DOL8, "$(P)$(R)ConvOffset")
+    field(DOL9, "$(P)$(R)ConvOffset")
+    field(DOLA, "$(P)$(R)ConvOffset")
+}
+
+record(ao, "$(P)$(R)Attenuation")
+{
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+    field(FLNK, "$(P)$(R)AttenuationSeq")
+}
+
+record(seq, "$(P)$(R)AttenuationSeq")
+{
+    field(SELM, "All")
+    field(LNK1, "$(P)$(R)AI1:Attenuation PP")
+    field(LNK2, "$(P)$(R)AI2:Attenuation PP")
+    field(LNK3, "$(P)$(R)AI3:Attenuation PP")
+    field(LNK4, "$(P)$(R)AI4:Attenuation PP")
+    field(LNK5, "$(P)$(R)AI5:Attenuation PP")
+    field(LNK6, "$(P)$(R)AI6:Attenuation PP")
+    field(LNK7, "$(P)$(R)AI7:Attenuation PP")
+    field(LNK8, "$(P)$(R)AI8:Attenuation PP")
+    field(LNK9, "$(P)$(R)AI9:Attenuation PP")
+    field(LNKA, "$(P)$(R)AI10:Attenuation PP")
+    field(DOL1, "$(P)$(R)Attenuation")
+    field(DOL2, "$(P)$(R)Attenuation")
+    field(DOL3, "$(P)$(R)Attenuation")
+    field(DOL4, "$(P)$(R)Attenuation")
+    field(DOL5, "$(P)$(R)Attenuation")
+    field(DOL6, "$(P)$(R)Attenuation")
+    field(DOL7, "$(P)$(R)Attenuation")
+    field(DOL8, "$(P)$(R)Attenuation")
+    field(DOL9, "$(P)$(R)Attenuation")
+    field(DOLA, "$(P)$(R)Attenuation")
+}
+
+
 
 

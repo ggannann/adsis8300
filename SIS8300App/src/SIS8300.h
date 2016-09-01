@@ -14,10 +14,25 @@
 #include <epicsTime.h>
 #include "asynNDArrayDriver.h"
 
-#define SisAcquireString        "SIS_ACQUIRE"
-#define SisAcquireTimeString    "SIS_ACQUIRE_TIME"
-#define SisElapsedTimeString    "SIS_ELAPSED_TIME"
-#define SisNumTimePointsString  "SIS_NUM_TIME_POINTS"
+#define SisAcquireString               "SIS_ACQUIRE"
+#define SisAcquireTimeString           "SIS_ACQUIRE_TIME"
+#define SisElapsedTimeString           "SIS_ELAPSED_TIME"
+#define SisNumTimePointsString         "SIS_NUM_TIME_POINTS"
+#define SisCountString                 "SIS_COUNT"
+#define SisClockSourceString           "SIS_CLOCK_SOURCE"
+#define SisClockFreqString             "SIS_CLOCK_FREQ"
+#define SisClockDivString              "SIS_CLOCK_DIV"
+#define SisTrigSourceString            "SIS_TRIG_SOURCE"
+#define SisTrigDoString                "SIS_TRIG_DO"
+#define SisTrigDelayString             "SIS_TRIG_DELAY"
+#define SisTrigRepeatString            "SIS_TRIG_REPEAT"
+#define SisChannelEnableString         "SIS_ENABLE"
+#define SisChannelDataString           "SIS_DATA"
+#define SisChannelConvFactorString     "SIS_CONV_FACTOR"
+#define SisChannelConvOffsetString     "SIS_CONV_OFFSET"
+#define SisChannelAttenuationString    "SIS_ATTENUATION"
+#define SisChannelDecimFactorString    "SIS_DECIM_FACTOR"
+#define SisChannelDecimOffsetString    "SIS_DECIM_OFFSET"
 
 #define MAX_SIGNALS 10
 
@@ -31,6 +46,7 @@ public:
 
     /* These are the methods that we override from asynNDArrayDriver */
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
+    virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
     virtual void report(FILE *fp, int details);
     /**< Should be private, but gets called from C, so must be public */
     void sisTask();
@@ -41,6 +57,21 @@ protected:
     int P_AcquireTime;
     int P_ElapsedTime;
     int P_NumTimePoints;
+    int P_Count;
+    int P_ClockSource;
+    int P_ClockFreq;
+    int P_ClockDiv;
+    int P_TrigSource;
+    int P_TrigDo;
+    int P_TrigDelay;
+    int P_TrigRepeat;
+    int P_Enable;
+    int P_Data;
+    int P_ConvFactor;
+    int P_ConvOffset;
+    int P_Attenuation;
+    int P_DecimFactor;
+    int P_DecimOffset;
 
     int P_Dummy;
     #define LAST_SIS8300_PARAM P_Dummy

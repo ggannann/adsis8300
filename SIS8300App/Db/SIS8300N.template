@@ -1,8 +1,8 @@
 #=================================================================#
-# Template file: ADCSDetector.template
-# Database for the records specific to the ADC simulated detector driver
-# Mark Rivers
-# February 28, 2016
+# Template file: SIS8300N.template
+# Database for the records specific to the Struck SIS8300 driver
+# Hinko Kocevar
+# September 11, 2016
 
 record(stringout, "$(P)$(R)Name")
 {
@@ -10,58 +10,148 @@ record(stringout, "$(P)$(R)Name")
    info(autosaveFields, "VAL")
 }
 
-record(ao, "$(P)$(R)Amplitude")
+record(bo, "$(P)$(R)Enable")
+{
+     field(PINI, "YES")
+     field(DTYP, "asynInt32")
+     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ENABLE")
+     field(ZNAM, "Disabled")
+     field(ONAM, "Enabled")
+     field(PINI, "YES")
+     field(VAL,  "0")
+     info(autosaveFields, "VAL")
+}
+
+record(bi, "$(P)$(R)Enable_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ENABLE")
+    field(SCAN, "I/O Intr")
+    field(ZNAM, "Disabled")
+    field(ONAM, "Enabled")
+}
+
+record(waveform, "$(P)$(R)Data") {
+    field(DTYP, "asynFloat32ArrayIn")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DATA")
+    field(SCAN, "I/O Intr")
+    field(FTVL, "FLOAT")
+    field(NELM, "$(AINELM)")
+    field(EGU,  "V")
+    field(TSEL, "")
+    field(FLNK, "")
+    field(STAT, "NO_ALARM")
+    field(SEVR, "NO_ALARM")
+}
+
+record(ao, "$(P)$(R)ConvFactor")
 {
    field(PINI, "YES")
    field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_AMPLITUDE")
-   field(PREC, "3")
-   field(VAL,  "1")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CONV_FACTOR")
+   field(PREC, "8")
+   field(EGU,  "V/adc")
+   field(VAL,  "0.000030518")
    info(autosaveFields, "VAL")
 }
 
-record(ao, "$(P)$(R)Offset")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_OFFSET")
-   field(PREC, "3")
-   info(autosaveFields, "VAL")
-}
-
-record(ao, "$(P)$(R)Period")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_PERIOD")
-   field(PREC, "3")
-   field(VAL,  "1")
-   info(autosaveFields, "VAL")
-}
-
-record(ai, "$(P)$(R)Frequency")
+record(ai, "$(P)$(R)ConvFactor_RBV")
 {
    field(DTYP, "asynFloat64")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_FREQUENCY")
-   field(PREC, "3")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CONV_FACTOR")
+   field(PREC, "8")
+   field(EGU,  "V/adc")
    field(SCAN, "I/O Intr")
 }
 
-record(ao, "$(P)$(R)Phase")
+record(ao, "$(P)$(R)ConvOffset")
 {
    field(PINI, "YES")
    field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_PHASE")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CONV_OFFSET")
    field(PREC, "3")
+   field(EGU,  "V")
+   field(VAL,  "-1.0")
    info(autosaveFields, "VAL")
 }
 
-record(ao, "$(P)$(R)Noise")
+record(ai, "$(P)$(R)ConvOffset_RBV")
+{
+   field(DTYP, "asynFloat64")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CONV_OFFSET")
+   field(PREC, "3")
+   field(EGU,  "V")
+   field(SCAN, "I/O Intr")
+}
+
+record(ao, "$(P)$(R)Attenuation")
 {
    field(PINI, "YES")
    field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIM_NOISE")
-   field(PREC, "3")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ATTENUATION")
+   field(PREC, "4")
+   field(EGU,  "dB")
+   field(DRVH, "0.0")
+   field(DRVL, "-31.5")
    info(autosaveFields, "VAL")
 }
 
+record(ai, "$(P)$(R)Attenuation_RBV")
+{
+   field(DTYP, "asynFloat64")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ATTENUATION")
+   field(PREC, "4")
+   field(EGU,  "dB")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)DecimFactor")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DECIM_FACTOR")
+   field(DRVL, "1")
+   field(VAL,  "1")
+   info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)DecimFactor_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DECIM_FACTOR")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)DecimOffset")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DECIM_OFFSET")
+   field(DRVL, "0")
+   field(VAL,  "0")
+   info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)DecimOffset_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DECIM_OFFSET")
+   field(SCAN, "I/O Intr")
+}
+
+#record(longout, "$(P)$(R)Count")
+#{
+#   field(PINI, "YES")
+#   field(DTYP, "asynInt32")
+#   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_COUNT")
+#   field(DRVL, "16")
+#   field(VAL,  "$(AINELM)")
+#   info(autosaveFields, "VAL")
+#}
+
+record(longin, "$(P)$(R)Count_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_COUNT")
+   field(SCAN, "I/O Intr")
+}
