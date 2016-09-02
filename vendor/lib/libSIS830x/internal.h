@@ -10,10 +10,10 @@ SIS830X_STATUS intReadMemory(PSIS830X_DEVICE device, uint32_t addr, uint32_t *da
 SIS830X_STATUS intWriteMemory(PSIS830X_DEVICE device, uint32_t addr, uint32_t *data, uint32_t len);
 
 // i2c bus handling
-SIS830X_STATUS inline i2cStart(PSIS830X_DEVICE device, uint32_t interfaceRegister);
-SIS830X_STATUS inline i2cStop(PSIS830X_DEVICE device, uint32_t interfaceRegister);
-SIS830X_STATUS inline i2cWrite(PSIS830X_DEVICE device, uint32_t interfaceRegister , uint8_t data, bool *ack);
-SIS830X_STATUS inline i2cRead(PSIS830X_DEVICE device, uint32_t interfaceRegister, uint8_t *data, bool ack);
+SIS830X_STATUS i2cStart(PSIS830X_DEVICE device, uint32_t interfaceRegister);
+SIS830X_STATUS i2cStop(PSIS830X_DEVICE device, uint32_t interfaceRegister);
+SIS830X_STATUS i2cWrite(PSIS830X_DEVICE device, uint32_t interfaceRegister , uint8_t data, bool *ack);
+SIS830X_STATUS i2cRead(PSIS830X_DEVICE device, uint32_t interfaceRegister, uint8_t *data, bool ack);
 
 // i2c bus handling
 SIS830X_STATUS intI2cStart(PSIS830X_DEVICE device);
