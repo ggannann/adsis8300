@@ -12,10 +12,17 @@ ifeq (vxWorks,$(findstring vxWorks, $(T_A)))
 CODE_CXXFLAGS=
 endif
 
-INC += SIS8300.h
-
 LIBRARY_IOC = SIS8300
-LIB_SRCS += SIS8300.cpp
+
+# Vendor specific headers and sources
+USR_INCLUDES += -I$(TOP)/vendor/driver
+USR_INCLUDES += -I$(TOP)/vendor/lib/libSIS830x
+SRC_DIRS += $(TOP)/vendor/lib/libSIS830x
+LIB_SRCS += ad9510.c internal.c main.c rtmI2C.c si5338aSynth.c spiFlash.c
+
+# EPICS specfic headers and sources
+INC += ADSIS8300.h
+LIB_SRCS += ADSIS8300.cpp
 
 DBD += SIS8300Support.dbd
 

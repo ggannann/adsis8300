@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <time.h>
 #include <math.h>
@@ -26,17 +27,34 @@
 #include <epicsTime.h>
 #include <epicsThread.h>
 #include <epicsEvent.h>
+#include <epicsExit.h>
 #include <iocsh.h>
 
 #include "asynNDArrayDriver.h"
 #include <epicsExport.h>
-#include "SIS8300.h"
+
+#include "ADSIS8300.h"
+
 
 static const char *driverName = "SIS8300";
 
+static const char *deviceTypes[3] = {
+		"8300",
+		"8301",
+		"8302",
+};
+
+/**
+ * Exit handler, delete the Pico8 object.
+ */
+static void exitHandler(void *drvPvt) {
+	ADSIS8300 *pPvt = (ADSIS8300 *) drvPvt;
+	delete pPvt;
+}
+
 static void sisTaskC(void *drvPvt)
 {
-    SIS8300 *pPvt = (SIS8300 *)drvPvt;
+    ADSIS8300 *pPvt = (ADSIS8300 *)drvPvt;
     pPvt->sisTask();
 }
 
@@ -53,7 +71,7 @@ static void sisTaskC(void *drvPvt)
   * \param[in] priority The thread priority for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   */
-SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
+ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
                                int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName, MAX_SIGNALS, NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
@@ -68,6 +86,14 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
 {
     int status = asynSuccess;
     const char *functionName = "SIS8300";
+
+	/* Create an EPICS exit handler */
+	epicsAtExit(exitHandler, this);
+
+
+    /* XXX: This should be proper /dev/sis8300-x and coming from argument! */
+    snprintf(mSisDevicePath, MAX_PATH_LEN, "/dev/sis8300-1");
+    mSisDevice = (PSIS830X_DEVICE)calloc(1, sizeof(SIS830X_DEVICE));
 
     /* Create the epicsEvents for signaling to the acquisition
      * task when acquisition starts and stops */
@@ -127,8 +153,19 @@ SIS8300::SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
 	printf("%s:%s: Init done...\n", driverName, functionName);
 }
 
+ADSIS8300::~ADSIS8300() {
+	printf("Shutdown and freeing up memory...\n");
+
+	this->lock();
+	printf("Data thread is already down!\n");
+	destroyDevice();
+
+	this->unlock();
+	printf("Shutdown complete!\n");
+}
+
 /** Template function to compute the simulated detector data for any data type */
-template <typename epicsType> int SIS8300::acquireArraysT()
+template <typename epicsType> int ADSIS8300::acquireArraysT()
 {
     size_t dims[2];
     int numTimePoints;
@@ -159,7 +196,7 @@ template <typename epicsType> int SIS8300::acquireArraysT()
 }
 
 /** Computes the new image data */
-int SIS8300::acquireArrays()
+int ADSIS8300::acquireArrays()
 {
     int dataType;
     getIntegerParam(NDDataType, &dataType); 
@@ -195,7 +232,7 @@ int SIS8300::acquireArrays()
     }
 }
 
-void SIS8300::setAcquire(int value)
+void ADSIS8300::setAcquire(int value)
 {
     if (value && !acquiring_) {
         /* Send an event to wake up the simulation task */
@@ -210,7 +247,7 @@ void SIS8300::setAcquire(int value)
 
 /** This thread calls computeImage to compute new image data and does the callbacks to send it to higher layers.
   * It implements the logic for single, multiple or continuous acquisition. */
-void SIS8300::sisTask()
+void ADSIS8300::sisTask()
 {
     int status = asynSuccess;
     NDArray *pImage;
@@ -227,11 +264,14 @@ void SIS8300::sisTask()
 
     this->lock();
 
-//	if (mHandle == -1) {
-//		printf("%s:%s: Data thread will not start...\n", driverName, functionName);
-//		this->unlock();
-//		return;
-//	}
+    initDevice();
+
+	if (mSisDevice->open == 0) {
+		printf("%s:%s: No SIS8300 device - data thread will not start...\n",
+				driverName, functionName);
+		this->unlock();
+		return;
+	}
 
 	printf("%s:%s: Data thread started...\n", driverName, functionName);
 
@@ -306,7 +346,7 @@ void SIS8300::sisTask()
   * For all parameters it sets the value in the parameter library and calls any registered callbacks..
   * \param[in] pasynUser pasynUser structure that encodes the reason and address.
   * \param[in] value Value to write. */
-asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
+asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
     int function = pasynUser->reason;
     int addr;
@@ -345,7 +385,7 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
   * For all parameters it sets the value in the parameter library and calls any registered callbacks..
   * \param[in] pasynUser pasynUser structure that encodes the reason and address.
   * \param[in] value Value to write. */
-asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
+asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
     int function = pasynUser->reason;
     int addr;
@@ -385,7 +425,7 @@ asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   * \param[in] fp File pointed passed by caller where the output is written to.
   * \param[in] details If >0 then driver details are printed.
   */
-void SIS8300::report(FILE *fp, int details)
+void ADSIS8300::report(FILE *fp, int details)
 {
 
     fprintf(fp, "Struck SIS8300 %s\n", this->portName);
@@ -400,12 +440,181 @@ void SIS8300::report(FILE *fp, int details)
     asynNDArrayDriver::report(fp, details);
 }
 
+int ADSIS8300::sisOpenDevice()
+{
+	SIS830X_STATUS ret;
+
+	ret = sis830x_OpenDeviceOnPath(mSisDevicePath, mSisDevice);
+	if (ret) {
+		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
+		sis830x_status2str(ret, mSisErrorStr);
+		printf("%s:%s: sis830x_OpenDeviceOnPath() failed %d - %s\n",
+				driverName, __func__, ret, mSisErrorStr);
+		return ret;
+	}
+
+	return 0;
+}
+
+int ADSIS8300::sisCloseDevice()
+{
+	SIS830X_STATUS ret;
+	ret = sis830x_CloseDevice(mSisDevice);
+	if (ret) {
+		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
+		sis830x_status2str(ret, mSisErrorStr);
+		printf("%s:%s: sis830x_CloseDevice() failed %d - %s\n",
+				driverName, __func__, ret, mSisErrorStr);
+		return ret;
+	}
+
+	return 0;
+}
+
+int ADSIS8300::sisReadReg(unsigned int reg, unsigned int *val)
+{
+	SIS830X_STATUS ret;
+
+	ret = sis830x_ReadRegister(mSisDevice, reg, val);
+	if (ret) {
+		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
+		sis830x_status2str(ret, mSisErrorStr);
+		printf("%s:%s: sis830x_ReadRegister() failed! reg 0x%X, status %d - %s\n",
+				driverName, __func__, reg, ret, mSisErrorStr);
+		return -1;
+	}
+	printf("%s:%s: reg 0x%X, val 0x%X (%d)\n", driverName, __func__, reg, *val, *val);
+
+	return 0;
+}
+
+int ADSIS8300::sisWriteReg(unsigned int reg, unsigned int val)
+{
+	SIS830X_STATUS ret;
+
+	ret = sis830x_WriteRegister(mSisDevice, reg, val);
+	if (ret) {
+		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
+		sis830x_status2str(ret, mSisErrorStr);
+		printf("%s:%s: sis830x_WriteRegister() failed! reg 0x%X, status %d - %s\n",
+				driverName, __func__, reg, ret, mSisErrorStr);
+		return -1;
+	}
+	printf("%s:%s: reg 0x%X, val 0x%X (%d)\n", driverName, __func__, reg, val, val);
+
+	return 0;
+}
+
+int ADSIS8300::initDevice()
+{
+	int ret;
+    unsigned int regVal;
+    unsigned int deviceType;
+    unsigned int fwVersion;
+    unsigned int serialNumber;
+    unsigned int fwOptions;
+
+	ret = sisOpenDevice();
+	if (ret) {
+		return -1;
+	}
+
+	/* Get device type and firmware release */
+	ret = sisReadReg(0, &regVal);
+	if (ret) {
+		return -1;
+	}
+	deviceType = regVal >> 16;
+	fwVersion = regVal & 0xFFFF;
+
+	/* Get firmware options */
+	ret = sisReadReg(5, &regVal);
+	if (ret) {
+		return -1;
+	}
+	fwOptions = regVal;
+
+	/* Get serial number */
+	ret = sisReadReg(1, &regVal);
+	if (ret) {
+		return -1;
+	}
+	serialNumber = regVal;
+
+
+	mSisDeviceType = deviceType;
+	mSisFirmwareVersion = fwVersion;
+	mSisSerialNumber = serialNumber;
+	mSisFirmwareOptions = fwOptions;
+
+	switch (deviceType) {
+	case 0x8300:
+		mSisMemorySize = 0x20000000;
+		if (fwOptions & (1 << 8)) {
+			mSisMemorySize *= 2;
+		}
+		break;
+	case 0x8301:
+		mSisMemorySize = 0x80000000;
+		break;
+	case 0x8302:
+		mSisMemorySize = 0x80000000;
+		break;
+	default:
+		printf("%s:%s: Device is unknown\n", driverName, __func__);
+		return -1;
+		break;
+	}
+
+	printf("%s:%s: Device is %s, serial no. %d, mem size %ld MB, fw 0x%4X\n",
+			driverName, __func__,
+			deviceTypes[deviceType-0x8300],
+			mSisSerialNumber,
+			mSisMemorySize / (1024*1024),
+			mSisFirmwareVersion);
+
+	return 0;
+}
+
+int ADSIS8300::destroyDevice()
+{
+	if (mSisDevice->open) {
+		sisCloseDevice();
+	}
+
+	return 0;
+}
+
+int ADSIS8300::setNumberOfSamples(unsigned int nr)
+{
+	int ret;
+	unsigned int regVal;
+	unsigned int chMask;
+
+    if (nr <= 0) {
+        return -1;
+    }
+    /* Limitation: has to be multiple of 16 */
+    if (nr % 16) {
+        return -1;
+    }
+    ret = sisReadReg(0x11, &regVal);
+    if (ret) {
+    	return -1;
+    }
+    chMask = 0x3FF & ~regVal;
+
+
+
+	return 0;
+}
+
 
 /** Configuration command, called directly or from iocsh */
 extern "C" int SIS8300Config(const char *portName, int numTimePoints, int dataType,
                                  int maxBuffers, int maxMemory, int priority, int stackSize)
 {
-    new SIS8300(portName, numTimePoints, (NDDataType_t)dataType,
+    new ADSIS8300(portName, numTimePoints, (NDDataType_t)dataType,
                     (maxBuffers < 0) ? 0 : maxBuffers,
                     (maxMemory < 0) ? 0 : maxMemory, 
                     priority, stackSize);

@@ -14,6 +14,8 @@
 #include <epicsTime.h>
 #include "asynNDArrayDriver.h"
 
+#include <sis830x.h>
+
 #define SisAcquireString               "SIS_ACQUIRE"
 #define SisAcquireTimeString           "SIS_ACQUIRE_TIME"
 #define SisElapsedTimeString           "SIS_ELAPSED_TIME"
@@ -34,15 +36,18 @@
 #define SisChannelDecimFactorString    "SIS_DECIM_FACTOR"
 #define SisChannelDecimOffsetString    "SIS_DECIM_OFFSET"
 
-#define MAX_SIGNALS 10
+#define MAX_SIGNALS                    10
+#define MAX_PATH_LEN                   32
+#define MAX_ERROR_STR_LEN              32
 
 /** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
   * Inherits from asynNDArrayDriver */
-class epicsShareClass SIS8300 : public asynNDArrayDriver {
+class epicsShareClass ADSIS8300 : public asynNDArrayDriver {
 public:
-	SIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
+	ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
                    int maxBuffers, size_t maxMemory,
                    int priority, int stackSize);
+	~ADSIS8300();
 
     /* These are the methods that we override from asynNDArrayDriver */
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
@@ -82,6 +87,15 @@ private:
     template <typename epicsType> int acquireArraysT();
     int acquireArrays();
     void setAcquire(int value);
+    int initDevice();
+    int destroyDevice();
+    int setNumberOfSamples(unsigned int nr);
+
+    /* low level SIS8300 handling */
+    int sisOpenDevice();
+    int sisCloseDevice();
+    int sisReadReg(unsigned int reg, unsigned int *val);
+    int sisWriteReg(unsigned int reg, unsigned int val);
 
     /* Our data */
     epicsEventId startEventId_;
@@ -89,6 +103,15 @@ private:
     int uniqueId_;
     int acquiring_;
     double elapsedTime_;
+
+    char mSisDevicePath[MAX_PATH_LEN];
+    PSIS830X_DEVICE mSisDevice;
+    char mSisErrorStr[MAX_ERROR_STR_LEN];
+    unsigned int mSisDeviceType;
+    unsigned int mSisFirmwareVersion;
+    unsigned long mSisMemorySize;
+    unsigned int mSisSerialNumber;
+    unsigned int mSisFirmwareOptions;
 };
 
 
