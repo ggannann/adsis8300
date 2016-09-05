@@ -36,9 +36,48 @@
 #define SisChannelDecimFactorString    "SIS_DECIM_FACTOR"
 #define SisChannelDecimOffsetString    "SIS_DECIM_OFFSET"
 
-#define MAX_SIGNALS                    10
 #define MAX_PATH_LEN                   32
 #define MAX_ERROR_STR_LEN              32
+
+/* Channel and sampling constants. */
+#define SIS8300_NUM_ADCS                5
+#define SIS8300_NUM_SIGNALS             (2 * SIS8300_NUM_ADCS)
+#define SIS8300_SAMPLE_BYTES            2
+#define SIS8300_BLOCK_SAMPLES           16          /**< Length of a device memory block in samples, granularity for setting number of samples. */
+#define SIS8300_BLOCK_BYTES             (SIS8300_SAMPLE_BYTES * SIS8300_BLOCK_SAMPLES)
+#define SIS8300DRV_CH_SETUP_FIRST       0x100   /**< Register address of the "Trigger setup register" for the first channel. */
+#define SIS8300DRV_CH_THRESHOLD_FIRST   0x110   /**< Register address of the "Trigger threshold register" for the first channel. */
+#define SIS8300DRV_CH_ADDRESS_FIRST     0x120   /**< Register address of the "Memory sample start register" for the first channel. */
+
+
+/* Registers */
+#define SIS8300_ID_REG                  0x00
+#define SIS8300_SERIALNR_REG            0x01
+#define SIS8300_XILINX_JTAG_REG         0x02
+
+#define SIS8300_USER_CTRL_REG           0x04
+#define SIS8300_FIRMWARE_OPTIONS_REG    0x05
+/* Firmware options bits */
+# define SIS8300_FPGA_SX_1GB_MEM        (1<<8)
+# define SIS8300_DUAL_CHANNEL_SAMPLING  (1<<2)
+# define SIS8300_RINGBUFFER_DELAY_EN    (1<<1)
+# define SIS8300_TRIGGER_BLOCK_EN       (1<<0)
+
+#define SIS8300_ACQUISITION_CTRL_REG    0x10
+#define SIS8300_SAMPLE_CTRL_REG         0x11
+
+#define SIS8300_SAMPLE_ADDRESS_CH1_REG  0x120
+#define SIS8300_SAMPLE_ADDRESS_CH2_REG  0x121
+#define SIS8300_SAMPLE_ADDRESS_CH3_REG  0x122
+#define SIS8300_SAMPLE_ADDRESS_CH4_REG  0x123
+#define SIS8300_SAMPLE_ADDRESS_CH5_REG  0x124
+#define SIS8300_SAMPLE_ADDRESS_CH6_REG  0x125
+#define SIS8300_SAMPLE_ADDRESS_CH7_REG  0x126
+#define SIS8300_SAMPLE_ADDRESS_CH8_REG  0x127
+#define SIS8300_SAMPLE_ADDRESS_CH9_REG  0x128
+#define SIS8300_SAMPLE_ADDRESS_CH10_REG 0x129
+
+#define SIS8300_SAMPLE_LENGTH_REG       0x12A
 
 /** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
   * Inherits from asynNDArrayDriver */
@@ -89,7 +128,12 @@ private:
     void setAcquire(int value);
     int initDevice();
     int destroyDevice();
-    int setNumberOfSamples(unsigned int nr);
+    int getNumberOfSamples(unsigned int *nrSamples);
+    int setChannelMask();
+    int configureChannels(unsigned int nrSamples, unsigned int channelMask);
+    int setNumberOfSamples(unsigned int nrSamples);
+    int enableChannel(unsigned int channel);
+    int disableChannel(unsigned int channel);
 
     /* low level SIS8300 handling */
     int sisOpenDevice();
@@ -112,6 +156,7 @@ private:
     unsigned long mSisMemorySize;
     unsigned int mSisSerialNumber;
     unsigned int mSisFirmwareOptions;
+    uint32_t mChannelMask;
 };
 
 

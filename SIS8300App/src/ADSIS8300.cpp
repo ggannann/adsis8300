@@ -39,9 +39,9 @@
 static const char *driverName = "SIS8300";
 
 static const char *deviceTypes[3] = {
-		"8300",
-		"8301",
-		"8302",
+		"SIS8300",
+		"SIS8300L",
+		"SIS8302L2",
 };
 
 /**
@@ -74,7 +74,7 @@ static void sisTaskC(void *drvPvt)
 ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
                                int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
-    : asynNDArrayDriver(portName, MAX_SIGNALS, NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
+    : asynNDArrayDriver(portName, SIS8300_NUM_SIGNALS, NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
     		asynFloat32ArrayMask,
 			asynFloat32ArrayMask,
 			ASYN_CANBLOCK | ASYN_MULTIDEVICE, /* asyn flags*/
@@ -177,13 +177,13 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
     getIntegerParam(P_NumTimePoints, &numTimePoints);
     getDoubleParam(P_AcquireTime, &acquireTime);
 
-    dims[0] = MAX_SIGNALS;
+    dims[0] = SIS8300_NUM_SIGNALS;
     dims[1] = numTimePoints;
 
     if (this->pArrays[0]) this->pArrays[0]->release();
     this->pArrays[0] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
     pData = (epicsType *)this->pArrays[0]->pData;
-    memset(pData, 0, MAX_SIGNALS * numTimePoints * sizeof(epicsType));
+    memset(pData, 0, SIS8300_NUM_SIGNALS * numTimePoints * sizeof(epicsType));
 
     /* XXX: Implement data acquisition */
 
@@ -333,7 +333,7 @@ void ADSIS8300::sisTask()
         this->lock();
 
         /* Call the callbacks to update any changes */
-        for (i=0; i<MAX_SIGNALS; i++) {
+        for (i=0; i<SIS8300_NUM_SIGNALS; i++) {
             callParamCallbacks(i);
         }
     }
@@ -350,17 +350,33 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
     int function = pasynUser->reason;
     int addr;
+    epicsInt32 oldValue;
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
     printf("%s: ENTER %d (%d) = %d\n", __func__, function, addr, value);
  
+    status = getIntegerParam(addr, function, &oldValue);
+
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
     status = setIntegerParam(addr, function, value);
 
     if (function == P_Acquire) {
         setAcquire(value);
+    } else if (function == P_NumTimePoints) {
+    	setNumberOfSamples(value);
+    } else if (function == P_Enable) {
+//        printf("%s: old Value %d (%d) = %d\n", __func__, function, addr, oldValue);
+//    	value = oldValue | (1 << addr);
+//    	value = 1 << addr;
+//        printf("%s: channel mask %d (%d) = %X\n", __func__, function, addr, value);
+    	if (value) {
+    		enableChannel(addr);
+    	} else {
+    		disableChannel(addr);
+    	}
+    	setChannelMask();
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeInt32(pasynUser, value);
@@ -520,7 +536,7 @@ int ADSIS8300::initDevice()
 	}
 
 	/* Get device type and firmware release */
-	ret = sisReadReg(0, &regVal);
+	ret = sisReadReg(SIS8300_ID_REG, &regVal);
 	if (ret) {
 		return -1;
 	}
@@ -528,14 +544,14 @@ int ADSIS8300::initDevice()
 	fwVersion = regVal & 0xFFFF;
 
 	/* Get firmware options */
-	ret = sisReadReg(5, &regVal);
+	ret = sisReadReg(SIS8300_FIRMWARE_OPTIONS_REG, &regVal);
 	if (ret) {
 		return -1;
 	}
 	fwOptions = regVal;
 
 	/* Get serial number */
-	ret = sisReadReg(1, &regVal);
+	ret = sisReadReg(SIS8300_SERIALNR_REG, &regVal);
 	if (ret) {
 		return -1;
 	}
@@ -585,30 +601,147 @@ int ADSIS8300::destroyDevice()
 	return 0;
 }
 
-int ADSIS8300::setNumberOfSamples(unsigned int nr)
+int ADSIS8300::configureChannels(unsigned int nrSamples, unsigned int channelMask) {
+    int ret;
+    unsigned int nrChannels, nrBytes, nrBlocks, ch;
+    uint32_t regVal;
+
+    /* Calculate if the selected channels will fit into card memory
+     * with selected number of samples. */
+    // 2 bytes per sample
+    nrBytes = nrSamples * SIS8300_SAMPLE_BYTES;
+    // 32 bytes per block
+    nrBlocks = nrSamples / SIS8300_BLOCK_BYTES;
+    nrChannels = 0;
+    // go over all channels and see if we have enough memory to spare
+    for (ch = 0; ch < SIS8300_NUM_SIGNALS; ch++) {
+        nrChannels += (channelMask & (1 << ch)) >> ch;
+    }
+    if (nrBytes && (nrChannels > mSisMemorySize / nrBytes)) {
+        return -1;
+    }
+
+    // get channel mask (1 - disabled!)
+    ret = sisReadReg(SIS8300_SAMPLE_CTRL_REG, &regVal);
+    if (ret) {
+        return -1;
+    }
+
+    /* Preserve trigger configuration. */
+//    regVal &= (uint32_t)0x3FF;
+//    regVal |= 0x3FF & (uint32_t)~channelMask;
+    regVal &= (uint32_t)0xC00;
+    regVal |= 0x3FF & (uint32_t)~channelMask;
+
+    ret = sisWriteReg(SIS8300_SAMPLE_CTRL_REG, regVal);
+    if (ret) {
+        return -1;
+    }
+
+    /* Set onboard memory addresses for enabled channels. */
+    nrChannels = 0;
+    for (ch = 0; ch < SIS8300_NUM_SIGNALS; ch++) {
+        if (channelMask & (1 << ch)) {
+            regVal = (uint32_t)nrChannels * nrBlocks;
+            ret = sisWriteReg(SIS8300_SAMPLE_ADDRESS_CH1_REG + ch, regVal);
+            if (ret) {
+                return -1;
+            }
+            nrChannels++;
+        }
+    }
+
+    return 0;
+}
+
+int ADSIS8300::setNumberOfSamples(unsigned int nrSamples)
 {
 	int ret;
 	unsigned int regVal;
-	unsigned int chMask;
+	unsigned int channelMask;
 
-    if (nr <= 0) {
+    if (nrSamples <= 0) {
         return -1;
     }
     /* Limitation: has to be multiple of 16 */
-    if (nr % 16) {
+    if (nrSamples % SIS8300_BLOCK_SAMPLES) {
         return -1;
     }
-    ret = sisReadReg(0x11, &regVal);
+    ret = sisReadReg(SIS8300_SAMPLE_CTRL_REG, &regVal);
     if (ret) {
     	return -1;
     }
-    chMask = 0x3FF & ~regVal;
+    channelMask = 0x3FF & ~regVal;
 
+    ret = configureChannels(nrSamples, channelMask);
+    if (ret) {
+    	return -1;
+    }
 
+    /* This is a hack working around the fact that the board always
+     * acquires one extra block of samples. */
+    if (nrSamples) {
+        nrSamples -= SIS8300_BLOCK_SAMPLES;
+    }
+
+    ret = sisWriteReg(SIS8300_SAMPLE_LENGTH_REG,
+    		(uint32_t)(nrSamples / SIS8300_BLOCK_SAMPLES));
 
 	return 0;
 }
 
+int ADSIS8300::getNumberOfSamples(unsigned int *nrSamples)
+{
+	int ret;
+	unsigned int regVal;
+
+	ret = sisReadReg(SIS8300_SAMPLE_LENGTH_REG, &regVal);
+    if (ret) {
+    	return -1;
+    }
+    *nrSamples = regVal * SIS8300_BLOCK_SAMPLES;
+
+    /* This is a hack working around the fact that the board always
+     * acquires one extra block of samples. */
+    *nrSamples += SIS8300_BLOCK_SAMPLES;
+
+    return 0;
+}
+
+int ADSIS8300::setChannelMask()
+{
+	int ret;
+	unsigned int nrSamples;
+
+	ret = getNumberOfSamples(&nrSamples);
+    if (ret) {
+    	return -1;
+    }
+    printf("%s: number of samples %X\n", __func__, nrSamples);
+
+    printf("%s: channel mask %X\n", __func__, mChannelMask);
+
+    ret = configureChannels(nrSamples, mChannelMask);
+    if (ret) {
+    	return -1;
+    }
+
+	return 0;
+}
+
+int ADSIS8300::enableChannel(unsigned int channel)
+{
+   	mChannelMask |= (1 << channel);
+    printf("%s: channel mask %X\n", __func__, mChannelMask);
+	return 0;
+}
+
+int ADSIS8300::disableChannel(unsigned int channel)
+{
+   	mChannelMask &= ~(1 << channel);
+    printf("%s: channel mask %X\n", __func__, mChannelMask);
+	return 0;
+}
 
 /** Configuration command, called directly or from iocsh */
 extern "C" int SIS8300Config(const char *portName, int numTimePoints, int dataType,
