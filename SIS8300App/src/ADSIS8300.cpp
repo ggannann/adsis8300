@@ -41,7 +41,7 @@ static const char *driverName = "SIS8300";
 static const char *deviceTypes[3] = {
 		"SIS8300",
 		"SIS8300L",
-		"SIS8302L2",
+		"SIS8300L2",
 };
 
 /**
@@ -589,6 +589,8 @@ int ADSIS8300::initDevice()
 			mSisMemorySize / (1024*1024),
 			mSisFirmwareVersion);
 
+	initADCs();
+
 	return 0;
 }
 
@@ -643,7 +645,7 @@ int ADSIS8300::configureChannels(unsigned int nrSamples, unsigned int channelMas
     for (ch = 0; ch < SIS8300_NUM_SIGNALS; ch++) {
         if (channelMask & (1 << ch)) {
             regVal = (uint32_t)nrChannels * nrBlocks;
-            ret = sisWriteReg(SIS8300_SAMPLE_ADDRESS_CH1_REG + ch, regVal);
+            ret = sisWriteReg(SIS8300_CH_ADDRESS_FIRST + ch, regVal);
             if (ret) {
                 return -1;
             }
@@ -740,6 +742,73 @@ int ADSIS8300::disableChannel(unsigned int channel)
 {
    	mChannelMask &= ~(1 << channel);
     printf("%s: channel mask %X\n", __func__, mChannelMask);
+	return 0;
+}
+
+int ADSIS8300::initADCs()
+{
+	int i;
+    unsigned int uint_adc_mux_select, addr, data;
+    uint32_t ui32_reg_val;
+    int ret;
+
+    printf("%s: start\n", __func__);
+    for (i = 0; i < SIS8300_NUM_ADCS; i++) {
+        uint_adc_mux_select = i << 24;
+
+        /* output type LVDS */
+        addr = (0x14 & 0xffff) << 8;
+        data = (0x40 & 0xff);
+        ui32_reg_val = uint_adc_mux_select + addr + data;
+        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
+        if (ret) {
+        	return -1;
+        }
+
+        addr = (0x16 & 0xffff) << 8;
+        data = (0x00 & 0xff);
+        ui32_reg_val = uint_adc_mux_select + addr + data;
+        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
+        if (ret) {
+        	return -1;
+        }
+
+        addr = (0x17 & 0xffff) << 8;
+        data = (0x00 & 0xff);
+        ui32_reg_val = uint_adc_mux_select + addr + data;
+        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
+        if (ret) {
+        	return -1;
+        }
+
+        /* register update cmd */
+        addr = (0xff & 0xffff) << 8;
+        data = (0x01 & 0xff);
+        ui32_reg_val = uint_adc_mux_select + addr + data;
+        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
+        if (ret) {
+        	return -1;
+        }
+    }
+    printf("%s: done\n", __func__);
+
+    return 0;
+}
+
+int ADSIS8300::setPretriggerSamples(unsigned int nrSamples)
+{
+	int ret;
+
+	if (nrSamples > SIS8300_MAX_PRETRIG) {
+    	return -1;
+	}
+    printf("%s: number of pretrigger samples %X\n", __func__, nrSamples);
+
+    ret = sisWriteReg(SIS8300_PRETRIGGER_DELAY_REG, nrSamples);
+    if (ret) {
+    	return -1;
+    }
+
 	return 0;
 }
 

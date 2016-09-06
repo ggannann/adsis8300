@@ -43,11 +43,11 @@
 #define SIS8300_NUM_ADCS                5
 #define SIS8300_NUM_SIGNALS             (2 * SIS8300_NUM_ADCS)
 #define SIS8300_SAMPLE_BYTES            2
-#define SIS8300_BLOCK_SAMPLES           16          /**< Length of a device memory block in samples, granularity for setting number of samples. */
+#define SIS8300_BLOCK_SAMPLES           16
 #define SIS8300_BLOCK_BYTES             (SIS8300_SAMPLE_BYTES * SIS8300_BLOCK_SAMPLES)
-#define SIS8300DRV_CH_SETUP_FIRST       0x100   /**< Register address of the "Trigger setup register" for the first channel. */
-#define SIS8300DRV_CH_THRESHOLD_FIRST   0x110   /**< Register address of the "Trigger threshold register" for the first channel. */
-#define SIS8300DRV_CH_ADDRESS_FIRST     0x120   /**< Register address of the "Memory sample start register" for the first channel. */
+#define SIS8300_MAX_PRETRIG             2046
+//#define SIS8300DRV_CH_SETUP_FIRST       0x100   /**< Register address of the "Trigger setup register" for the first channel. */
+//#define SIS8300DRV_CH_THRESHOLD_FIRST   0x110   /**< Register address of the "Trigger threshold register" for the first channel. */
 
 
 /* Registers */
@@ -66,6 +66,10 @@
 #define SIS8300_ACQUISITION_CTRL_REG    0x10
 #define SIS8300_SAMPLE_CTRL_REG         0x11
 
+#define SIS8300_ADC_SPI_REG             0x48
+#define SIS8300_ADC_INPUT_TAP_DELAY_REG 0x49
+
+#define SIS8300_CH_ADDRESS_FIRST        0x120
 #define SIS8300_SAMPLE_ADDRESS_CH1_REG  0x120
 #define SIS8300_SAMPLE_ADDRESS_CH2_REG  0x121
 #define SIS8300_SAMPLE_ADDRESS_CH3_REG  0x122
@@ -78,6 +82,7 @@
 #define SIS8300_SAMPLE_ADDRESS_CH10_REG 0x129
 
 #define SIS8300_SAMPLE_LENGTH_REG       0x12A
+#define SIS8300_PRETRIGGER_DELAY_REG    0x12B
 
 /** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
   * Inherits from asynNDArrayDriver */
@@ -134,6 +139,8 @@ private:
     int setNumberOfSamples(unsigned int nrSamples);
     int enableChannel(unsigned int channel);
     int disableChannel(unsigned int channel);
+    int initADCs();
+    int setPretriggerSamples(unsigned int nrSamples);
 
     /* low level SIS8300 handling */
     int sisOpenDevice();
