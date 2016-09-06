@@ -15,9 +15,9 @@ endif
 LIBRARY_IOC = SIS8300
 
 # Vendor specific headers and sources
-USR_INCLUDES += -I$(TOP)/vendor/driver
-USR_INCLUDES += -I$(TOP)/vendor/lib/libSIS830x
-SRC_DIRS += $(TOP)/vendor/lib/libSIS830x
+USR_INCLUDES += -I$(TOP)/vendor/struck/driver
+USR_INCLUDES += -I$(TOP)/vendor/struck/lib/libSIS830x
+SRC_DIRS += $(TOP)/vendor/struck/lib/libSIS830x
 LIB_SRCS += ad9510.c internal.c main.c rtmI2C.c si5338aSynth.c spiFlash.c
 
 # EPICS specfic headers and sources
