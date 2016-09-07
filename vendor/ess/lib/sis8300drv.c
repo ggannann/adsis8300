@@ -168,9 +168,9 @@ int sis8300drv_is_device_open(sis8300drv_usr *sisuser) {
 
     sisdevice = sisuser->device;
     if (!sisdevice) {
-        return status_no_device;
+        return 0;
     }
-	return status_success;
+	return 1;
 }
 
 int sis8300drv_get_device_type(sis8300drv_usr *sisuser, unsigned int *device_type) {
