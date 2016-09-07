@@ -17,3 +17,6 @@ O.*/
 .settings
 .cproject
 external/
+*.bin
+*.mcs
+

@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <assert.h>
+#include <string>
 
 #include <epicsTime.h>
 #include <epicsThread.h>
@@ -44,8 +45,18 @@ static const char *deviceTypes[3] = {
 		"SIS8300L2",
 };
 
+#define SIS8300DRV_CALL(s, x) {\
+	char message[256]; \
+	int ret = x; \
+	if (ret) {\
+        sprintf(message, "%s: %s() error: %s (%d)\n", \
+                __func__, s, sis8300drv_strerror(ret), ret); \
+        throw std::string(message); \
+	} \
+}
+
 /**
- * Exit handler, delete the Pico8 object.
+ * Exit handler, delete the ADSIS8300 object.
  */
 static void exitHandler(void *drvPvt) {
 	ADSIS8300 *pPvt = (ADSIS8300 *) drvPvt;
@@ -74,7 +85,8 @@ static void sisTaskC(void *drvPvt)
 ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
                                int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
-    : asynNDArrayDriver(portName, SIS8300_NUM_SIGNALS, NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
+    : asynNDArrayDriver(portName, SIS8300DRV_NUM_AI_CHANNELS,
+    		NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
     		asynFloat32ArrayMask,
 			asynFloat32ArrayMask,
 			ASYN_CANBLOCK | ASYN_MULTIDEVICE, /* asyn flags*/
@@ -87,13 +99,16 @@ ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataT
     int status = asynSuccess;
     const char *functionName = "SIS8300";
 
+    mRawDataArray = NULL;
+
 	/* Create an EPICS exit handler */
 	epicsAtExit(exitHandler, this);
 
 
     /* XXX: This should be proper /dev/sis8300-x and coming from argument! */
-    snprintf(mSisDevicePath, MAX_PATH_LEN, "/dev/sis8300-1");
-    mSisDevice = (PSIS830X_DEVICE)calloc(1, sizeof(SIS830X_DEVICE));
+    snprintf(mSisDevicePath, MAX_PATH_LEN, "/dev/sis8300-2");
+    mSisDevice = (sis8300drv_usr*)calloc(1, sizeof(sis8300drv_usr));
+    mSisDevice->file = mSisDevicePath;
 
     /* Create the epicsEvents for signaling to the acquisition
      * task when acquisition starts and stops */
@@ -111,19 +126,19 @@ ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataT
     }
 
     createParam(SisAcquireString,               asynParamInt32, &P_Acquire);
+    createParam(SisMessageString,               asynParamOctet, &P_Message);
     createParam(SisAcquireTimeString,         asynParamFloat64, &P_AcquireTime);
     createParam(SisElapsedTimeString,         asynParamFloat64, &P_ElapsedTime);
     createParam(SisNumTimePointsString,         asynParamInt32, &P_NumTimePoints);
-    createParam(SisCountString,                 asynParamInt32, &P_Count);
     createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
     createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
     createParam(SisClockDivString,              asynParamInt32, &P_ClockDiv);
     createParam(SisTrigSourceString,            asynParamInt32, &P_TrigSource);
+    createParam(SisTrigLineString,              asynParamInt32, &P_TrigLine);
     createParam(SisTrigDoString,                asynParamInt32, &P_TrigDo);
     createParam(SisTrigDelayString,             asynParamInt32, &P_TrigDelay);
     createParam(SisTrigRepeatString,            asynParamInt32, &P_TrigRepeat);
     createParam(SisChannelEnableString,         asynParamInt32, &P_Enable);
-    createParam(SisChannelDataString,    asynParamFloat32Array, &P_Data);
     createParam(SisChannelConvFactorString,   asynParamFloat64, &P_ConvFactor);
     createParam(SisChannelConvOffsetString,   asynParamFloat64, &P_ConvOffset);
     createParam(SisChannelAttenuationString,  asynParamFloat64, &P_Attenuation);
@@ -132,6 +147,8 @@ ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataT
 
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
+    status |= setStringParam(P_Message, "No error");
+    status |= setIntegerParam(P_Acquire, 0);
 
     if (status) {
         printf("%s: unable to set parameters\n", functionName);
@@ -150,6 +167,10 @@ ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataT
         return;
     }
 
+    this->lock();
+    initDevice();
+    this->unlock();
+
 	printf("%s:%s: Init done...\n", driverName, functionName);
 }
 
@@ -167,30 +188,65 @@ ADSIS8300::~ADSIS8300() {
 /** Template function to compute the simulated detector data for any data type */
 template <typename epicsType> int ADSIS8300::acquireArraysT()
 {
-    size_t dims[2];
+    size_t dims[2], rawDims[1];
     int numTimePoints;
     NDDataType_t dataType;
     epicsType *pData;
+    epicsUInt16 *pRawData;
     double acquireTime;
+    int ch;
+    int i;
     
     getIntegerParam(NDDataType, (int *)&dataType);
     getIntegerParam(P_NumTimePoints, &numTimePoints);
     getDoubleParam(P_AcquireTime, &acquireTime);
 
-    dims[0] = SIS8300_NUM_SIGNALS;
+    dims[0] = SIS8300DRV_NUM_AI_CHANNELS;
     dims[1] = numTimePoints;
 
     if (this->pArrays[0]) this->pArrays[0]->release();
     this->pArrays[0] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
     pData = (epicsType *)this->pArrays[0]->pData;
-    memset(pData, 0, SIS8300_NUM_SIGNALS * numTimePoints * sizeof(epicsType));
+    memset(pData, 0, SIS8300DRV_NUM_AI_CHANNELS * numTimePoints * sizeof(epicsType));
 
-    /* XXX: Implement data acquisition */
+    /* raw data is always 16-bit, allocate for one channel */
+    if (mRawDataArray && (mRawDataArray->dims[0].size != (size_t)numTimePoints)) {
+    	mRawDataArray->release();
+    	mRawDataArray = NULL;
+    }
+    if (! mRawDataArray) {
+    	rawDims[0] = numTimePoints;
+        mRawDataArray = pNDArrayPool->alloc(1, rawDims, NDUInt16, 0, 0);
+    }
+	pRawData = (epicsUInt16 *)mRawDataArray->pData;
+
+    for (ch = 0; ch < SIS8300DRV_NUM_AI_CHANNELS; ch++) {
+        if (!(mChannelMask & (1 << ch))) {
+            continue;
+        }
+
+        try {
+        	SIS8300DRV_CALL("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, ch, pRawData));
+            this->unlock();
+            printf("CH %d [%d]: ", ch, numTimePoints);
+        	for (i = 0; i < numTimePoints; i++) {
+        		printf("%d ", *(pRawData + i));
+        		pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)*(pRawData + i);
+        	}
+        	printf("\n");
+            this->lock();
+        } catch (std::string &e) {
+			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+			  "%s:%s: %s\n",
+			  driverName, __func__, e.c_str());
+			setStringParam(P_Message, e.c_str());
+        }
+    }
 
     // XXX: Remove once data acquisition added
-    this->unlock();
-    sleep(2);
-    this->lock();
+//    this->unlock();
+//    sleep(2);
+//    this->lock();
 
     return 0;
 }
@@ -257,6 +313,9 @@ void ADSIS8300::sisTask()
     int arrayCounter;
 //    double timeStep;
     int i;
+//    int trgsrc;
+    int trgRepeat;
+    int trgCount;
     double elapsed;
     const char *functionName = "sisTask";
 
@@ -264,9 +323,7 @@ void ADSIS8300::sisTask()
 
     this->lock();
 
-    initDevice();
-
-	if (mSisDevice->open == 0) {
+	if (sis8300drv_is_device_open(mSisDevice)) {
 		printf("%s:%s: No SIS8300 device - data thread will not start...\n",
 				driverName, functionName);
 		this->unlock();
@@ -277,30 +334,71 @@ void ADSIS8300::sisTask()
 
 	startTime.secPastEpoch = 0;
 	startTime.nsec = 0;
+	trgCount = 0;
 
 	/* Loop forever */
     while (1) {
+		printf("%s: 0 Acquiring = %d..\n", __func__, acquiring_);
+
         /* Has acquisition been stopped? */
         status = epicsEventTryWait(this->stopEventId_);
         if (status == epicsEventWaitOK) {
+			printf("%s: 1 Acquiring = %d..\n", __func__, acquiring_);
+        	trgCount = 0;
             acquiring_ = 0;
             startTime.secPastEpoch = 0;
             startTime.nsec = 0;
         }
-        printf("%s: 1 Acquring = %d..\n", __func__, acquiring_);
+
+        if (acquiring_) {
+			printf("%s: 2 Acquiring = %d..\n", __func__, acquiring_);
+			getIntegerParam(P_TrigRepeat, &trgRepeat);
+			/* Stop the acquisition if set number of triggers has been reached */
+			if (trgRepeat == 0) {
+				acquiring_ = 0;
+			} else if (trgRepeat >= trgCount) {
+				acquiring_ = 0;
+			}
+        }
        
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
           /* Release the lock while we wait for an event that says acquire has started, then lock again */
             asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
                 "%s:%s: waiting for acquire to start\n", driverName, functionName);
+    		printf("%s: 2a Acquiring = %d..\n", __func__, acquiring_);
             this->unlock();
             status = epicsEventWait(this->startEventId_);
             this->lock();
             acquiring_ = 1;
             elapsedTime_ = 0.0;
+        	trgCount = 0;
+    		printf("%s: 2b Acquiring = %d..\n", __func__, acquiring_);
         }
-        printf("%s: 2 Acquring = %d..\n", __func__, acquiring_);
+
+		printf("%s: 3 Acquiring = %d..\n", __func__, acquiring_);
+        try {
+			SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
+        } catch (std::string &e) {
+			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+			  "%s:%s: %s\n",
+			  driverName, __func__, e.c_str());
+			setStringParam(P_Message, e.c_str());
+        }
+
+        /* Trigger arrived */
+        trgCount++;
+        printf("%s: 5 Acquiring = %d..\n", __func__, acquiring_);
+
+        try {
+        	SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
+        } catch (std::string &e) {
+			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+			  "%s:%s: %s\n",
+			  driverName, __func__, e.c_str());
+			setStringParam(P_Message, e.c_str());
+        }
+        printf("%s: 6 Acquiring = %d..\n", __func__, acquiring_);
 
         /* Get the data */
         acquireArrays();
@@ -333,7 +431,7 @@ void ADSIS8300::sisTask()
         this->lock();
 
         /* Call the callbacks to update any changes */
-        for (i=0; i<SIS8300_NUM_SIGNALS; i++) {
+        for (i=0; i<SIS8300DRV_NUM_AI_CHANNELS; i++) {
             callParamCallbacks(i);
         }
     }
@@ -364,19 +462,89 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
     if (function == P_Acquire) {
         setAcquire(value);
+    } else if (function == P_ClockSource) {
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)value));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
+    } else if (function == P_ClockDiv) {
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)value));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
+    } else if (function == P_TrigSource) {
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)value));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
+    } else if (function == P_TrigLine) {
+    	try {
+    		sis8300drv_trg_ext trgext = trg_ext_harlink;
+    		unsigned int trgmask = (1 << P_TrigLine);
+    		if (P_TrigLine > SIS8300DRV_NUM_FP_TRG) {
+    			trgext = trg_ext_mlvds;
+    			trgmask = (1 << (P_TrigLine - SIS8300DRV_NUM_FP_TRG));
+    		}
+    		SIS8300DRV_CALL("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
+    } else if (function == P_TrigDelay) {
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, value));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
+    } else if (function == P_TrigDo) {
+    	setAcquire(1);
     } else if (function == P_NumTimePoints) {
-    	setNumberOfSamples(value);
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, value));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
     } else if (function == P_Enable) {
-//        printf("%s: old Value %d (%d) = %d\n", __func__, function, addr, oldValue);
-//    	value = oldValue | (1 << addr);
-//    	value = 1 << addr;
-//        printf("%s: channel mask %d (%d) = %X\n", __func__, function, addr, value);
     	if (value) {
     		enableChannel(addr);
     	} else {
     		disableChannel(addr);
     	}
-    	setChannelMask();
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_set_channel_mask", sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeInt32(pasynUser, value);
@@ -415,7 +583,16 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     status = setDoubleParam(addr, function, value);
 
     if (function == P_ClockFreq) {
-        // XXX: Add code
+    	try {
+    		sis8300drv_clk_div clkdiv = 250000000.0 / value;
+    		SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeFloat64(pasynUser, value);
@@ -444,7 +621,18 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 void ADSIS8300::report(FILE *fp, int details)
 {
 
-    fprintf(fp, "Struck SIS8300 %s\n", this->portName);
+    fprintf(fp, "Struck           : %s\n", this->portName);
+    if (sis8300drv_is_device_open(mSisDevice)) {
+    	fprintf(fp,
+    			"Device type      : %s\n"
+    			"Serial number    : %d\n"
+    			"Firmware version : 0x%4X\n"
+    			"Memory size      : %ld MB\n",
+    			deviceTypes[mSisDeviceType-0x8300],
+    			mSisSerialNumber,
+    			mSisFirmwareVersion,
+    			mSisMemorySizeMb);
+    }
     if (details > 0) {
         int numTimePoints, dataType;
         getIntegerParam(P_NumTimePoints, &numTimePoints);
@@ -456,278 +644,44 @@ void ADSIS8300::report(FILE *fp, int details)
     asynNDArrayDriver::report(fp, details);
 }
 
-int ADSIS8300::sisOpenDevice()
-{
-	SIS830X_STATUS ret;
-
-	ret = sis830x_OpenDeviceOnPath(mSisDevicePath, mSisDevice);
-	if (ret) {
-		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
-		sis830x_status2str(ret, mSisErrorStr);
-		printf("%s:%s: sis830x_OpenDeviceOnPath() failed %d - %s\n",
-				driverName, __func__, ret, mSisErrorStr);
-		return ret;
-	}
-
-	return 0;
-}
-
-int ADSIS8300::sisCloseDevice()
-{
-	SIS830X_STATUS ret;
-	ret = sis830x_CloseDevice(mSisDevice);
-	if (ret) {
-		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
-		sis830x_status2str(ret, mSisErrorStr);
-		printf("%s:%s: sis830x_CloseDevice() failed %d - %s\n",
-				driverName, __func__, ret, mSisErrorStr);
-		return ret;
-	}
-
-	return 0;
-}
-
-int ADSIS8300::sisReadReg(unsigned int reg, unsigned int *val)
-{
-	SIS830X_STATUS ret;
-
-	ret = sis830x_ReadRegister(mSisDevice, reg, val);
-	if (ret) {
-		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
-		sis830x_status2str(ret, mSisErrorStr);
-		printf("%s:%s: sis830x_ReadRegister() failed! reg 0x%X, status %d - %s\n",
-				driverName, __func__, reg, ret, mSisErrorStr);
-		return -1;
-	}
-	printf("%s:%s: reg 0x%X, val 0x%X (%d)\n", driverName, __func__, reg, *val, *val);
-
-	return 0;
-}
-
-int ADSIS8300::sisWriteReg(unsigned int reg, unsigned int val)
-{
-	SIS830X_STATUS ret;
-
-	ret = sis830x_WriteRegister(mSisDevice, reg, val);
-	if (ret) {
-		memset(mSisErrorStr, 0, MAX_ERROR_STR_LEN);
-		sis830x_status2str(ret, mSisErrorStr);
-		printf("%s:%s: sis830x_WriteRegister() failed! reg 0x%X, status %d - %s\n",
-				driverName, __func__, reg, ret, mSisErrorStr);
-		return -1;
-	}
-	printf("%s:%s: reg 0x%X, val 0x%X (%d)\n", driverName, __func__, reg, val, val);
-
-	return 0;
-}
-
 int ADSIS8300::initDevice()
 {
-	int ret;
-    unsigned int regVal;
-    unsigned int deviceType;
-    unsigned int fwVersion;
-    unsigned int serialNumber;
-    unsigned int fwOptions;
+	try {
+		SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
+		SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &mSisSerialNumber));
+		SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &mSisFirmwareVersion));
+		mSisFirmwareVersion &= 0x0000FFFF;
+		SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &mSisDeviceType));
+		SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &mSisMemorySizeMb));
+		mSisMemorySizeMb /= (1024*1024);
+		printf("%s: Device is %s, serial no. %d, fw 0x%4X, mem size %ld MB\n",
+				__func__,
+				deviceTypes[mSisDeviceType-0x8300],
+				mSisSerialNumber,
+				mSisFirmwareVersion,
+				mSisMemorySizeMb);
 
-	ret = sisOpenDevice();
-	if (ret) {
-		return -1;
+		SIS8300DRV_CALL("sis8300drv_init_adc", sis8300drv_init_adc(mSisDevice));
+	} catch (const std::string &e) {
+	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+	    	  "%s:%s: %s\n",
+	          driverName, __func__, e.c_str());
+	      setStringParam(P_Message, e.c_str());
 	}
-
-	/* Get device type and firmware release */
-	ret = sisReadReg(SIS8300_ID_REG, &regVal);
-	if (ret) {
-		return -1;
-	}
-	deviceType = regVal >> 16;
-	fwVersion = regVal & 0xFFFF;
-
-	/* Get firmware options */
-	ret = sisReadReg(SIS8300_FIRMWARE_OPTIONS_REG, &regVal);
-	if (ret) {
-		return -1;
-	}
-	fwOptions = regVal;
-
-	/* Get serial number */
-	ret = sisReadReg(SIS8300_SERIALNR_REG, &regVal);
-	if (ret) {
-		return -1;
-	}
-	serialNumber = regVal;
-
-
-	mSisDeviceType = deviceType;
-	mSisFirmwareVersion = fwVersion;
-	mSisSerialNumber = serialNumber;
-	mSisFirmwareOptions = fwOptions;
-
-	switch (deviceType) {
-	case 0x8300:
-		mSisMemorySize = 0x20000000;
-		if (fwOptions & (1 << 8)) {
-			mSisMemorySize *= 2;
-		}
-		break;
-	case 0x8301:
-		mSisMemorySize = 0x80000000;
-		break;
-	case 0x8302:
-		mSisMemorySize = 0x80000000;
-		break;
-	default:
-		printf("%s:%s: Device is unknown\n", driverName, __func__);
-		return -1;
-		break;
-	}
-
-	printf("%s:%s: Device is %s, serial no. %d, mem size %ld MB, fw 0x%4X\n",
-			driverName, __func__,
-			deviceTypes[deviceType-0x8300],
-			mSisSerialNumber,
-			mSisMemorySize / (1024*1024),
-			mSisFirmwareVersion);
-
-	initADCs();
 
 	return 0;
 }
 
 int ADSIS8300::destroyDevice()
 {
-	if (mSisDevice->open) {
-		sisCloseDevice();
+	try {
+		SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
+	} catch (const std::string &e) {
+		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+			"%s:%s: %s\n",
+	        driverName, __func__, e.c_str());
+	    setStringParam(P_Message, e.c_str());
 	}
-
-	return 0;
-}
-
-int ADSIS8300::configureChannels(unsigned int nrSamples, unsigned int channelMask) {
-    int ret;
-    unsigned int nrChannels, nrBytes, nrBlocks, ch;
-    uint32_t regVal;
-
-    /* Calculate if the selected channels will fit into card memory
-     * with selected number of samples. */
-    // 2 bytes per sample
-    nrBytes = nrSamples * SIS8300_SAMPLE_BYTES;
-    // 32 bytes per block
-    nrBlocks = nrSamples / SIS8300_BLOCK_BYTES;
-    nrChannels = 0;
-    // go over all channels and see if we have enough memory to spare
-    for (ch = 0; ch < SIS8300_NUM_SIGNALS; ch++) {
-        nrChannels += (channelMask & (1 << ch)) >> ch;
-    }
-    if (nrBytes && (nrChannels > mSisMemorySize / nrBytes)) {
-        return -1;
-    }
-
-    // get channel mask (1 - disabled!)
-    ret = sisReadReg(SIS8300_SAMPLE_CTRL_REG, &regVal);
-    if (ret) {
-        return -1;
-    }
-
-    /* Preserve trigger configuration. */
-//    regVal &= (uint32_t)0x3FF;
-//    regVal |= 0x3FF & (uint32_t)~channelMask;
-    regVal &= (uint32_t)0xC00;
-    regVal |= 0x3FF & (uint32_t)~channelMask;
-
-    ret = sisWriteReg(SIS8300_SAMPLE_CTRL_REG, regVal);
-    if (ret) {
-        return -1;
-    }
-
-    /* Set onboard memory addresses for enabled channels. */
-    nrChannels = 0;
-    for (ch = 0; ch < SIS8300_NUM_SIGNALS; ch++) {
-        if (channelMask & (1 << ch)) {
-            regVal = (uint32_t)nrChannels * nrBlocks;
-            ret = sisWriteReg(SIS8300_CH_ADDRESS_FIRST + ch, regVal);
-            if (ret) {
-                return -1;
-            }
-            nrChannels++;
-        }
-    }
-
-    return 0;
-}
-
-int ADSIS8300::setNumberOfSamples(unsigned int nrSamples)
-{
-	int ret;
-	unsigned int regVal;
-	unsigned int channelMask;
-
-    if (nrSamples <= 0) {
-        return -1;
-    }
-    /* Limitation: has to be multiple of 16 */
-    if (nrSamples % SIS8300_BLOCK_SAMPLES) {
-        return -1;
-    }
-    ret = sisReadReg(SIS8300_SAMPLE_CTRL_REG, &regVal);
-    if (ret) {
-    	return -1;
-    }
-    channelMask = 0x3FF & ~regVal;
-
-    ret = configureChannels(nrSamples, channelMask);
-    if (ret) {
-    	return -1;
-    }
-
-    /* This is a hack working around the fact that the board always
-     * acquires one extra block of samples. */
-    if (nrSamples) {
-        nrSamples -= SIS8300_BLOCK_SAMPLES;
-    }
-
-    ret = sisWriteReg(SIS8300_SAMPLE_LENGTH_REG,
-    		(uint32_t)(nrSamples / SIS8300_BLOCK_SAMPLES));
-
-	return 0;
-}
-
-int ADSIS8300::getNumberOfSamples(unsigned int *nrSamples)
-{
-	int ret;
-	unsigned int regVal;
-
-	ret = sisReadReg(SIS8300_SAMPLE_LENGTH_REG, &regVal);
-    if (ret) {
-    	return -1;
-    }
-    *nrSamples = regVal * SIS8300_BLOCK_SAMPLES;
-
-    /* This is a hack working around the fact that the board always
-     * acquires one extra block of samples. */
-    *nrSamples += SIS8300_BLOCK_SAMPLES;
-
-    return 0;
-}
-
-int ADSIS8300::setChannelMask()
-{
-	int ret;
-	unsigned int nrSamples;
-
-	ret = getNumberOfSamples(&nrSamples);
-    if (ret) {
-    	return -1;
-    }
-    printf("%s: number of samples %X\n", __func__, nrSamples);
-
-    printf("%s: channel mask %X\n", __func__, mChannelMask);
-
-    ret = configureChannels(nrSamples, mChannelMask);
-    if (ret) {
-    	return -1;
-    }
-
 	return 0;
 }
 
@@ -742,73 +696,6 @@ int ADSIS8300::disableChannel(unsigned int channel)
 {
    	mChannelMask &= ~(1 << channel);
     printf("%s: channel mask %X\n", __func__, mChannelMask);
-	return 0;
-}
-
-int ADSIS8300::initADCs()
-{
-	int i;
-    unsigned int uint_adc_mux_select, addr, data;
-    uint32_t ui32_reg_val;
-    int ret;
-
-    printf("%s: start\n", __func__);
-    for (i = 0; i < SIS8300_NUM_ADCS; i++) {
-        uint_adc_mux_select = i << 24;
-
-        /* output type LVDS */
-        addr = (0x14 & 0xffff) << 8;
-        data = (0x40 & 0xff);
-        ui32_reg_val = uint_adc_mux_select + addr + data;
-        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
-        if (ret) {
-        	return -1;
-        }
-
-        addr = (0x16 & 0xffff) << 8;
-        data = (0x00 & 0xff);
-        ui32_reg_val = uint_adc_mux_select + addr + data;
-        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
-        if (ret) {
-        	return -1;
-        }
-
-        addr = (0x17 & 0xffff) << 8;
-        data = (0x00 & 0xff);
-        ui32_reg_val = uint_adc_mux_select + addr + data;
-        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
-        if (ret) {
-        	return -1;
-        }
-
-        /* register update cmd */
-        addr = (0xff & 0xffff) << 8;
-        data = (0x01 & 0xff);
-        ui32_reg_val = uint_adc_mux_select + addr + data;
-        ret = sisWriteReg(SIS8300_ADC_SPI_REG, ui32_reg_val);
-        if (ret) {
-        	return -1;
-        }
-    }
-    printf("%s: done\n", __func__);
-
-    return 0;
-}
-
-int ADSIS8300::setPretriggerSamples(unsigned int nrSamples)
-{
-	int ret;
-
-	if (nrSamples > SIS8300_MAX_PRETRIG) {
-    	return -1;
-	}
-    printf("%s: number of pretrigger samples %X\n", __func__, nrSamples);
-
-    ret = sisWriteReg(SIS8300_PRETRIGGER_DELAY_REG, nrSamples);
-    if (ret) {
-    	return -1;
-    }
-
 	return 0;
 }
 

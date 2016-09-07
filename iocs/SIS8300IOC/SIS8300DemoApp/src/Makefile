@@ -23,6 +23,8 @@ PROD_SRCS_vxWorks += $(PROD_NAME)_registerRecordDeviceDriver.cpp
 
 PROD_LIBS += SIS8300
 
+PROD_SYS_LIBS += rt m udev
+
 include $(ADCORE)/ADApp/commonDriverMakefile
 
 #=============================

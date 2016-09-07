@@ -31,19 +31,6 @@ record(bi, "$(P)$(R)Enable_RBV")
     field(ONAM, "Enabled")
 }
 
-record(waveform, "$(P)$(R)Data") {
-    field(DTYP, "asynFloat32ArrayIn")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DATA")
-    field(SCAN, "I/O Intr")
-    field(FTVL, "FLOAT")
-    field(NELM, "$(AINELM)")
-    field(EGU,  "V")
-    field(TSEL, "")
-    field(FLNK, "")
-    field(STAT, "NO_ALARM")
-    field(SEVR, "NO_ALARM")
-}
-
 record(ao, "$(P)$(R)ConvFactor")
 {
    field(PINI, "YES")
@@ -136,22 +123,5 @@ record(longin, "$(P)$(R)DecimOffset_RBV")
 {
    field(DTYP, "asynInt32")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DECIM_OFFSET")
-   field(SCAN, "I/O Intr")
-}
-
-#record(longout, "$(P)$(R)Count")
-#{
-#   field(PINI, "YES")
-#   field(DTYP, "asynInt32")
-#   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_COUNT")
-#   field(DRVL, "16")
-#   field(VAL,  "$(AINELM)")
-#   info(autosaveFields, "VAL")
-#}
-
-record(longin, "$(P)$(R)Count_RBV")
-{
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_COUNT")
    field(SCAN, "I/O Intr")
 }
