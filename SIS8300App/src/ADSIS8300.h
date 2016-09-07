@@ -44,9 +44,10 @@
   * Inherits from asynNDArrayDriver */
 class epicsShareClass ADSIS8300 : public asynNDArrayDriver {
 public:
-	ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
-                   int maxBuffers, size_t maxMemory,
-                   int priority, int stackSize);
+	ADSIS8300(const char *portName, const char *devicePath,
+			int numTimePoints, NDDataType_t dataType,
+			int maxBuffers, size_t maxMemory,
+			int priority, int stackSize);
 	~ADSIS8300();
 
     /* These are the methods that we override from asynNDArrayDriver */

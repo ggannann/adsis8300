@@ -82,8 +82,9 @@ static void sisTaskC(void *drvPvt)
   * \param[in] priority The thread priority for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   */
-ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataType,
-                               int maxBuffers, size_t maxMemory, int priority, int stackSize)
+ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
+		int numTimePoints, NDDataType_t dataType,
+		int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName, SIS8300DRV_NUM_AI_CHANNELS,
     		NUM_SIS8300_PARAMS, maxBuffers, maxMemory,
@@ -105,8 +106,7 @@ ADSIS8300::ADSIS8300(const char *portName, int numTimePoints, NDDataType_t dataT
 	epicsAtExit(exitHandler, this);
 
 
-    /* XXX: This should be proper /dev/sis8300-x and coming from argument! */
-    snprintf(mSisDevicePath, MAX_PATH_LEN, "/dev/sis8300-2");
+    snprintf(mSisDevicePath, MAX_PATH_LEN, "%s", devicePath);
     mSisDevice = (sis8300drv_usr*)calloc(1, sizeof(sis8300drv_usr));
     mSisDevice->file = mSisDevicePath;
 
@@ -230,7 +230,7 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
             this->unlock();
             printf("CH %d [%d]: ", ch, numTimePoints);
         	for (i = 0; i < numTimePoints; i++) {
-        		printf("%d ", *(pRawData + i));
+//        		printf("%d ", *(pRawData + i));
         		pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)*(pRawData + i);
         	}
         	printf("\n");
@@ -323,7 +323,7 @@ void ADSIS8300::sisTask()
 
     this->lock();
 
-	if (sis8300drv_is_device_open(mSisDevice)) {
+	if (!sis8300drv_is_device_open(mSisDevice)) {
 		printf("%s:%s: No SIS8300 device - data thread will not start...\n",
 				driverName, functionName);
 		this->unlock();
@@ -356,8 +356,12 @@ void ADSIS8300::sisTask()
 			/* Stop the acquisition if set number of triggers has been reached */
 			if (trgRepeat == 0) {
 				acquiring_ = 0;
-			} else if (trgRepeat >= trgCount) {
+				setIntegerParam(P_Acquire, 0);
+				callParamCallbacks(0);
+			} else if ((trgRepeat > 0) && (trgCount >= trgRepeat)) {
 				acquiring_ = 0;
+				setIntegerParam(P_Acquire, 0);
+				callParamCallbacks(0);
 			}
         }
        
@@ -622,17 +626,16 @@ void ADSIS8300::report(FILE *fp, int details)
 {
 
     fprintf(fp, "Struck           : %s\n", this->portName);
-    if (sis8300drv_is_device_open(mSisDevice)) {
-    	fprintf(fp,
-    			"Device type      : %s\n"
-    			"Serial number    : %d\n"
-    			"Firmware version : 0x%4X\n"
-    			"Memory size      : %ld MB\n",
-    			deviceTypes[mSisDeviceType-0x8300],
-    			mSisSerialNumber,
-    			mSisFirmwareVersion,
-    			mSisMemorySizeMb);
-    }
+    fprintf(fp, "Device path      : %s\n", mSisDevicePath);
+	fprintf(fp,
+			"Device type      : %s\n"
+			"Serial number    : %d\n"
+			"Firmware version : 0x%4X\n"
+			"Memory size      : %ld MB\n",
+			deviceTypes[mSisDeviceType-0x8300],
+			mSisSerialNumber,
+			mSisFirmwareVersion,
+			mSisMemorySizeMb);
     if (details > 0) {
         int numTimePoints, dataType;
         getIntegerParam(P_NumTimePoints, &numTimePoints);
@@ -700,36 +703,40 @@ int ADSIS8300::disableChannel(unsigned int channel)
 }
 
 /** Configuration command, called directly or from iocsh */
-extern "C" int SIS8300Config(const char *portName, int numTimePoints, int dataType,
-                                 int maxBuffers, int maxMemory, int priority, int stackSize)
+extern "C" int SIS8300Config(const char *portName, const char *devicePath,
+		int numTimePoints, int dataType, int maxBuffers, int maxMemory,
+		int priority, int stackSize)
 {
-    new ADSIS8300(portName, numTimePoints, (NDDataType_t)dataType,
-                    (maxBuffers < 0) ? 0 : maxBuffers,
-                    (maxMemory < 0) ? 0 : maxMemory, 
-                    priority, stackSize);
+    new ADSIS8300(portName, devicePath,
+    		numTimePoints, (NDDataType_t)dataType,
+			(maxBuffers < 0) ? 0 : maxBuffers,
+			(maxMemory < 0) ? 0 : maxMemory,
+			priority, stackSize);
     return(asynSuccess);
 }
 
 /** Code for iocsh registration */
 static const iocshArg SIS8300ConfigArg0 = {"Port name",     iocshArgString};
-static const iocshArg SIS8300ConfigArg1 = {"# time points", iocshArgInt};
-static const iocshArg SIS8300ConfigArg2 = {"Data type",     iocshArgInt};
-static const iocshArg SIS8300ConfigArg3 = {"maxBuffers",    iocshArgInt};
-static const iocshArg SIS8300ConfigArg4 = {"maxMemory",     iocshArgInt};
-static const iocshArg SIS8300ConfigArg5 = {"priority",      iocshArgInt};
-static const iocshArg SIS8300ConfigArg6 = {"stackSize",     iocshArgInt};
+static const iocshArg SIS8300ConfigArg1 = {"Device path",   iocshArgString};
+static const iocshArg SIS8300ConfigArg2 = {"# time points", iocshArgInt};
+static const iocshArg SIS8300ConfigArg3 = {"Data type",     iocshArgInt};
+static const iocshArg SIS8300ConfigArg4 = {"maxBuffers",    iocshArgInt};
+static const iocshArg SIS8300ConfigArg5 = {"maxMemory",     iocshArgInt};
+static const iocshArg SIS8300ConfigArg6 = {"priority",      iocshArgInt};
+static const iocshArg SIS8300ConfigArg7 = {"stackSize",     iocshArgInt};
 static const iocshArg * const SIS8300ConfigArgs[] = {&SIS8300ConfigArg0,
-                                                            &SIS8300ConfigArg1,
-                                                            &SIS8300ConfigArg2,
-                                                            &SIS8300ConfigArg3,
-                                                            &SIS8300ConfigArg4,
-                                                            &SIS8300ConfigArg5,
-                                                            &SIS8300ConfigArg6};
-static const iocshFuncDef configSIS8300 = {"SIS8300Config", 7, SIS8300ConfigArgs};
+                                                     &SIS8300ConfigArg1,
+													 &SIS8300ConfigArg2,
+													 &SIS8300ConfigArg3,
+													 &SIS8300ConfigArg4,
+													 &SIS8300ConfigArg5,
+													 &SIS8300ConfigArg6,
+													 &SIS8300ConfigArg7};
+static const iocshFuncDef configSIS8300 = {"SIS8300Config", 8, SIS8300ConfigArgs};
 static void configSIS8300CallFunc(const iocshArgBuf *args)
 {
-    SIS8300Config(args[0].sval, args[1].ival, args[2].ival, args[3].ival,
-                         args[4].ival, args[5].ival, args[6].ival);
+    SIS8300Config(args[0].sval, args[1].sval, args[2].ival, args[3].ival,
+    		args[4].ival, args[5].ival, args[6].ival, args[7].ival);
 }
 
 
