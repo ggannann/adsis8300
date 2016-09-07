@@ -67,8 +67,18 @@ int sis8300drv_read_fw_image(sis8300drv_usr *sisuser, unsigned size, void *data,
         return status_no_device;
     }
     
-    if (sisdevice->type != SIS8300_SIS8300L) {
-        return status_incompatible;
+//    if (sisdevice->type != SIS8300_SIS8300L) {
+//        return status_incompatible;
+//    }
+    switch (sisdevice->type) {
+        case SIS8300_SIS8300L2:
+            break;
+        case SIS8300_SIS8300L:
+            break;
+//        case SIS8300_SIS8300:
+//            break;
+        default:
+            return status_incompatible;
     }
     
     pthread_mutex_lock(&sisdevice->lock);
@@ -140,8 +150,18 @@ int sis8300drv_write_fw_image(sis8300drv_usr *sisuser, unsigned size, void *data
         return status_no_device;
     }
     
-    if (sisdevice->type != SIS8300_SIS8300L) {
-        return status_incompatible;
+//    if (sisdevice->type != SIS8300_SIS8300L) {
+//        return status_incompatible;
+//    }
+    switch (sisdevice->type) {
+        case SIS8300_SIS8300L2:
+            break;
+        case SIS8300_SIS8300L:
+            break;
+//        case SIS8300_SIS8300:
+//            break;
+        default:
+            return status_incompatible;
     }
     
     pthread_mutex_lock(&sisdevice->lock);

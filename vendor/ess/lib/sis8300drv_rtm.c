@@ -650,8 +650,18 @@ int sis8300drv_i2c_rw(sis8300drv_dev *sisdevice, uint32_t rw, uint32_t i2c_reg_a
     }
 
     /* 1. CHECK IF THE DEVICE SUPPORTS I2C FUNCTIONALITY */
-    if (sisdevice->type != SIS8300_SIS8300L) {
-        return status_argument_invalid;
+//    if (sisdevice->type != SIS8300_SIS8300L) {
+//        return status_argument_invalid;
+//    }
+    switch (sisdevice->type) {
+        case SIS8300_SIS8300L2:
+            break;
+        case SIS8300_SIS8300L:
+            break;
+//        case SIS8300_SIS8300:
+//            break;
+        default:
+            return status_incompatible;
     }
 
     status = sis8300_reg_read(sisdevice->handle, SIS8300_IDENTIFIER_VERSION_REG, &ui32_reg_val);

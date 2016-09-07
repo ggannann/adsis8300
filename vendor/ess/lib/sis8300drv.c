@@ -140,6 +140,10 @@ int sis8300drv_open_device(sis8300drv_usr *sisuser) {
             sisdevice->type = SIS8300_SIS8300L;
             sisdevice->mem_size = SIS8300_2GB_MEMORY;
             break;
+        case SIS8300_SIS8300L2:
+            sisdevice->type = SIS8300_SIS8300L2;
+            sisdevice->mem_size = SIS8300_2GB_MEMORY;
+            break;
         default:
             /* This should happen only in case the custom fiwmware changed the
              * model identifier in which case we assume a SIS8300 board with
@@ -159,6 +163,37 @@ int sis8300drv_open_device(sis8300drv_usr *sisuser) {
     return status_success;
 }
 
+int sis8300drv_is_device_open(sis8300drv_usr *sisuser) {
+    sis8300drv_dev  *sisdevice;
+
+    sisdevice = sisuser->device;
+    if (!sisdevice) {
+        return status_no_device;
+    }
+	return status_success;
+}
+
+int sis8300drv_get_device_type(sis8300drv_usr *sisuser, unsigned int *device_type) {
+    sis8300drv_dev  *sisdevice;
+
+    sisdevice = sisuser->device;
+    if (!sisdevice) {
+        return status_no_device;
+    }
+	*device_type = sisdevice->type;
+	return status_success;
+}
+
+int sis8300drv_get_memory_size(sis8300drv_usr *sisuser, unsigned long *memory_size) {
+    sis8300drv_dev  *sisdevice;
+
+    sisdevice = sisuser->device;
+    if (!sisdevice) {
+        return status_no_device;
+    }
+	*memory_size = sisdevice->mem_size;
+	return status_success;
+}
 
 /**
  * @brief Close device corresponding to the specified user context struct.

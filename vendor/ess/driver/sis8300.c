@@ -280,6 +280,9 @@ static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
         case SIS8300_SIS8300L:
             sisdevice->mem_size = SIS8300_2GB_MEMORY;
             break;
+        case SIS8300_SIS8300L2:
+            sisdevice->mem_size = SIS8300_2GB_MEMORY;
+            break;
         default:
             /* This should happen only in case the custom fiwmware changed the
              * model identifier in which case we assume the least amount possible. */
