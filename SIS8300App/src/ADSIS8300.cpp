@@ -150,6 +150,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     createParam(SisSerialNumberString,          asynParamInt32, &P_SerialNumber);
     createParam(SisMemorySizeString,            asynParamInt32, &P_MemorySize);
     createParam(SisDeviceTypeString,            asynParamInt32, &P_DeviceType);
+    createParam(SisRTMTypeString,               asynParamInt32, &P_RTMType);
 
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
@@ -160,6 +161,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(P_SerialNumber, 0);
     status |= setIntegerParam(P_MemorySize, 0);
     status |= setIntegerParam(P_DeviceType, 0);
+    status |= setIntegerParam(P_RTMType, 0);
 
     if (status) {
         printf("%s: unable to set parameters\n", functionName);
@@ -619,6 +621,22 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     	try {
     		sis8300drv_clk_div clkdiv = 250000000.0 / value;
     		SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
+    } else if (function == P_Attenuation) {
+    	try {
+    		int RTMType = 0;
+    		getIntegerParam(P_RTMType, &RTMType);
+    		/* Only DWC8VM1 has attenuators */
+    		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
+				int val = (int)((value + 31.5) * 2);
+				SIS8300DRV_CALL("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, val));
+    		}
     	} catch (const std::string &e) {
     	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
     	    	  "%s:%s: %s\n",

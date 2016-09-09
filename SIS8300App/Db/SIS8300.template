@@ -348,14 +348,31 @@ record(bo, "$(P)$(R)Reset")
     field(ONAM, "Reset")
 }
 
-#record(bi, "$(P)$(R)TrigDo_RBV")
-#{
-#    field(DTYP, "asynInt32")
-#    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DO")
-#    field(ZNAM, "Idle")
-#    field(ONAM, "Acquire")
-#    field(SCAN, "I/O Intr")
-#}
+record(mbbo, "$(P)$(R)RTMType") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_RTM_TYPE")
+    field(ZRVL, "0")
+    field(ZRST, "None")
+    field(ONVL, "1")
+    field(ONST, "SIS8900")
+    field(TWVL, "2")
+    field(TWST, "DWC8VM1")
+    field(PINI, "YES")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)RTMType_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_RTM_TYPE")
+    field(SCAN, "I/O Intr")
+    field(ZRVL, "0")
+    field(ZRST, "None")
+    field(ONVL, "1")
+    field(ONST, "SIS8900")
+    field(TWVL, "2")
+    field(TWST, "DWC8VM1")
+}
 
 
 

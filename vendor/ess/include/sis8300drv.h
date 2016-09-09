@@ -106,10 +106,10 @@ typedef enum {
  * @brief Enumeration of possible RTM types.
  */
 typedef enum {
-    rtm_sis8900 = 0,
-    rtm_dwc8vm1 = 1,
-    rtm_ds8vm1  = 2,
-    rtm_none    = 3
+    rtm_none    = 0,
+    rtm_sis8900 = 1,
+    rtm_dwc8vm1 = 2,
+    rtm_ds8vm1  = 3,
 } sis8300drv_rtm;
 
 /**

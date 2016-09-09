@@ -42,6 +42,7 @@
 #define SisDeviceTypeString            "SIS_DEVICE_TYPE"
 #define SisSerialNumberString          "SIS_SERIAL_NUMBER"
 #define SisMemorySizeString            "SIS_MEMORY_SIZE"
+#define SisRTMTypeString               "SIS_RTM_TYPE"
 
 #define MAX_PATH_LEN                   32
 #define MAX_ERROR_STR_LEN              32
@@ -90,6 +91,7 @@ protected:
     int P_SerialNumber;
     int P_DeviceType;
     int P_MemorySize;
+    int P_RTMType;
 
     int P_Dummy;
     #define LAST_SIS8300_PARAM P_Dummy

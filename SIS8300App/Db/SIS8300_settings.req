@@ -7,5 +7,6 @@ $(P)$(R)ClockDiv
 $(P)$(R)TrigSource
 $(P)$(R)TrigDelay
 $(P)$(R)TrigRepeat
+$(P)$(R)RTMType
 
 file "NDArrayBase_settings.req", P=$(P), R=$(R)
