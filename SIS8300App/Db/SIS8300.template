@@ -6,6 +6,36 @@
 
 include "NDArrayBase.template"
 
+
+record(longin, "$(P)$(R)DeviceType_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DEVICE_TYPE")
+    field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)SerialNumber_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_SERIAL_NUMBER")
+    field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)FWVersion_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_FW_VERSION")
+    field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)MemorySize_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_MEMORY_SIZE")
+    field(EGU,  "MB")
+    field(SCAN, "I/O Intr")
+}
+
 record(waveform, "$(P)$(R)Message_RBV")
 {
     field(DTYP, "asynOctetRead")
@@ -71,6 +101,23 @@ record(ai, "$(P)$(R)ElapsedTime")
     field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_ELAPSED_TIME")
     field(PREC, "3")
+    field(SCAN, "I/O Intr")
+}
+
+record(ao, "$(P)$(R)TimeStep")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TIME_STEP")
+    field(PREC, "10")
+    info(autosaveFields, "VAL")
+}
+
+record(ai, "$(P)$(R)TimeStep_RBV")
+{
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TIME_STEP")
+    field(PREC, "10")
     field(SCAN, "I/O Intr")
 }
 
@@ -292,6 +339,23 @@ record(longin, "$(P)$(R)TrigRepeat_RBV")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_REPEAT")
     field(SCAN, "I/O Intr")
 }
+
+record(bo, "$(P)$(R)Reset")
+{
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_RESET")
+    field(ZNAM, "Normal")
+    field(ONAM, "Reset")
+}
+
+#record(bi, "$(P)$(R)TrigDo_RBV")
+#{
+#    field(DTYP, "asynInt32")
+#    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DO")
+#    field(ZNAM, "Idle")
+#    field(ONAM, "Acquire")
+#    field(SCAN, "I/O Intr")
+#}
 
 
 

@@ -1,4 +1,5 @@
 $(P)$(R)NumTimePoints
+$(P)$(R)TimeStep
 $(P)$(R)AcquireTime
 $(P)$(R)ClockSource
 $(P)$(R)ClockFreq

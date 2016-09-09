@@ -17,10 +17,11 @@
 
 #include <sis8300drv.h>
 
-#define SisAcquireString               "SIS_ACQUIRE"
 #define SisMessageString               "SIS_MESSAGE"
+#define SisAcquireString               "SIS_ACQUIRE"
 #define SisAcquireTimeString           "SIS_ACQUIRE_TIME"
 #define SisElapsedTimeString           "SIS_ELAPSED_TIME"
+#define SisTimeStepString              "SIS_TIME_STEP"
 #define SisNumTimePointsString         "SIS_NUM_TIME_POINTS"
 #define SisClockSourceString           "SIS_CLOCK_SOURCE"
 #define SisClockFreqString             "SIS_CLOCK_FREQ"
@@ -36,6 +37,11 @@
 #define SisChannelAttenuationString    "SIS_ATTENUATION"
 #define SisChannelDecimFactorString    "SIS_DECIM_FACTOR"
 #define SisChannelDecimOffsetString    "SIS_DECIM_OFFSET"
+#define SisResetString                 "SIS_RESET"
+#define SisFirmwareVersionString       "SIS_FW_VERSION"
+#define SisDeviceTypeString            "SIS_DEVICE_TYPE"
+#define SisSerialNumberString          "SIS_SERIAL_NUMBER"
+#define SisMemorySizeString            "SIS_MEMORY_SIZE"
 
 #define MAX_PATH_LEN                   32
 #define MAX_ERROR_STR_LEN              32
@@ -60,9 +66,9 @@ public:
 protected:
     int P_Acquire;
     #define FIRST_SIS8300_PARAM P_Acquire
-    int P_Message;
     int P_AcquireTime;
     int P_ElapsedTime;
+    int P_TimeStep;
     int P_NumTimePoints;
     int P_ClockSource;
     int P_ClockFreq;
@@ -78,6 +84,12 @@ protected:
     int P_Attenuation;
     int P_DecimFactor;
     int P_DecimOffset;
+    int P_Reset;
+    int P_Message;
+    int P_FirmwareVersion;
+    int P_SerialNumber;
+    int P_DeviceType;
+    int P_MemorySize;
 
     int P_Dummy;
     #define LAST_SIS8300_PARAM P_Dummy
@@ -103,10 +115,10 @@ private:
     char mSisDevicePath[MAX_PATH_LEN];
     sis8300drv_usr *mSisDevice;
     char mSisErrorStr[MAX_ERROR_STR_LEN];
-    unsigned int mSisDeviceType;
-    unsigned int mSisFirmwareVersion;
-    unsigned long mSisMemorySizeMb;
-    unsigned int mSisSerialNumber;
+//    unsigned int mSisDeviceType;
+//    unsigned int mSisFirmwareVersion;
+//    unsigned long mSisMemorySizeMb;
+//    unsigned int mSisSerialNumber;
     unsigned int mSisFirmwareOptions;
     uint32_t mChannelMask;
     NDArray *mRawDataArray;

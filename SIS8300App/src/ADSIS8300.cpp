@@ -37,13 +37,13 @@
 #include "ADSIS8300.h"
 
 
-static const char *driverName = "SIS8300";
+static const char *driverName = "ADSIS8300";
 
-static const char *deviceTypes[3] = {
-		"SIS8300",
-		"SIS8300L",
-		"SIS8300L2",
-};
+//static const char *deviceTypes[3] = {
+//		"SIS8300",
+//		"SIS8300L",
+//		"SIS8300L2",
+//};
 
 #define SIS8300DRV_CALL(s, x) {\
 	char message[256]; \
@@ -126,9 +126,9 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     }
 
     createParam(SisAcquireString,               asynParamInt32, &P_Acquire);
-    createParam(SisMessageString,               asynParamOctet, &P_Message);
     createParam(SisAcquireTimeString,         asynParamFloat64, &P_AcquireTime);
     createParam(SisElapsedTimeString,         asynParamFloat64, &P_ElapsedTime);
+    createParam(SisTimeStepString,            asynParamFloat64, &P_TimeStep);
     createParam(SisNumTimePointsString,         asynParamInt32, &P_NumTimePoints);
     createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
     createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
@@ -144,11 +144,22 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     createParam(SisChannelAttenuationString,  asynParamFloat64, &P_Attenuation);
     createParam(SisChannelDecimFactorString,    asynParamInt32, &P_DecimFactor);
     createParam(SisChannelDecimOffsetString,    asynParamInt32, &P_DecimOffset);
+    createParam(SisResetString,                 asynParamInt32, &P_Reset);
+    createParam(SisMessageString,               asynParamOctet, &P_Message);
+    createParam(SisFirmwareVersionString,       asynParamInt32, &P_FirmwareVersion);
+    createParam(SisSerialNumberString,          asynParamInt32, &P_SerialNumber);
+    createParam(SisMemorySizeString,            asynParamInt32, &P_MemorySize);
+    createParam(SisDeviceTypeString,            asynParamInt32, &P_DeviceType);
 
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
+    status |= setDoubleParam(P_TimeStep, 0.001);
     status |= setStringParam(P_Message, "No error");
     status |= setIntegerParam(P_Acquire, 0);
+    status |= setIntegerParam(P_FirmwareVersion, 0);
+    status |= setIntegerParam(P_SerialNumber, 0);
+    status |= setIntegerParam(P_MemorySize, 0);
+    status |= setIntegerParam(P_DeviceType, 0);
 
     if (status) {
         printf("%s: unable to set parameters\n", functionName);
@@ -194,12 +205,15 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
     epicsType *pData;
     epicsUInt16 *pRawData;
     double acquireTime;
+    double timeStep;
     int ch;
     int i;
+    double convFactor, convOffset;
     
     getIntegerParam(NDDataType, (int *)&dataType);
     getIntegerParam(P_NumTimePoints, &numTimePoints);
     getDoubleParam(P_AcquireTime, &acquireTime);
+    getDoubleParam(P_TimeStep, &timeStep);
 
     dims[0] = SIS8300DRV_NUM_AI_CHANNELS;
     dims[1] = numTimePoints;
@@ -227,11 +241,13 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
 
         try {
         	SIS8300DRV_CALL("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, ch, pRawData));
+        	getDoubleParam(ch, P_ConvFactor, &convFactor);
+        	getDoubleParam(ch, P_ConvOffset, &convOffset);
             this->unlock();
-            printf("CH %d [%d]: ", ch, numTimePoints);
+            printf("CH %d [%d] CF %f, CO %f: ", ch, numTimePoints, convFactor, convOffset);
         	for (i = 0; i < numTimePoints; i++) {
 //        		printf("%d ", *(pRawData + i));
-        		pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)*(pRawData + i);
+        		pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)((double)*(pRawData + i) * convFactor + convOffset);
         	}
         	printf("\n");
             this->lock();
@@ -242,11 +258,6 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
 			setStringParam(P_Message, e.c_str());
         }
     }
-
-    // XXX: Remove once data acquisition added
-//    this->unlock();
-//    sleep(2);
-//    this->lock();
 
     return 0;
 }
@@ -307,16 +318,15 @@ void ADSIS8300::sisTask()
 {
     int status = asynSuccess;
     NDArray *pImage;
-    epicsTimeStamp startTime;
     epicsTimeStamp frameTime;
-//    int numTimePoints;
+    int numTimePoints;
     int arrayCounter;
-//    double timeStep;
+    double timeStep;
     int i;
-//    int trgsrc;
+    int trgSource;
     int trgRepeat;
     int trgCount;
-    double elapsed;
+    double acquireTime;
     const char *functionName = "sisTask";
 
 	sleep(1);
@@ -332,8 +342,6 @@ void ADSIS8300::sisTask()
 
 	printf("%s:%s: Data thread started...\n", driverName, functionName);
 
-	startTime.secPastEpoch = 0;
-	startTime.nsec = 0;
 	trgCount = 0;
 
 	/* Loop forever */
@@ -346,8 +354,6 @@ void ADSIS8300::sisTask()
 			printf("%s: 1 Acquiring = %d..\n", __func__, acquiring_);
         	trgCount = 0;
             acquiring_ = 0;
-            startTime.secPastEpoch = 0;
-            startTime.nsec = 0;
         }
 
         if (acquiring_) {
@@ -357,16 +363,15 @@ void ADSIS8300::sisTask()
 			if (trgRepeat == 0) {
 				acquiring_ = 0;
 				setIntegerParam(P_Acquire, 0);
-				callParamCallbacks(0);
 			} else if ((trgRepeat > 0) && (trgCount >= trgRepeat)) {
 				acquiring_ = 0;
 				setIntegerParam(P_Acquire, 0);
-				callParamCallbacks(0);
 			}
         }
        
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
+        	callParamCallbacks(0);
           /* Release the lock while we wait for an event that says acquire has started, then lock again */
             asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
                 "%s:%s: waiting for acquire to start\n", driverName, functionName);
@@ -417,12 +422,6 @@ void ADSIS8300::sisTask()
         epicsTimeGetCurrent(&frameTime);
         pImage->timeStamp = frameTime.secPastEpoch + frameTime.nsec / 1.e9;
         updateTimeStamp(&pImage->epicsTS);
-        if (startTime.secPastEpoch == 0) {
-        	startTime = frameTime;
-        }
-        elapsed = (double)(frameTime.secPastEpoch + frameTime.nsec / 1.e9) -
-        		(double)(startTime.secPastEpoch + startTime.nsec / 1.e9);
-        setDoubleParam(P_ElapsedTime, elapsed);
 
         /* Get any attributes that have been defined for this driver */
         this->getAttributes(pImage->pAttributeList);
@@ -437,6 +436,26 @@ void ADSIS8300::sisTask()
         /* Call the callbacks to update any changes */
         for (i=0; i<SIS8300DRV_NUM_AI_CHANNELS; i++) {
             callParamCallbacks(i);
+        }
+
+		getIntegerParam(P_NumTimePoints, &numTimePoints);
+        getDoubleParam(P_TimeStep, &timeStep);
+        getDoubleParam(P_AcquireTime, &acquireTime);
+        elapsedTime_ += (timeStep * numTimePoints);
+        setDoubleParam(P_ElapsedTime, elapsedTime_);
+        if ((acquireTime > 0) && (elapsedTime_ > acquireTime)) {
+            setAcquire(0);
+            setIntegerParam(P_Acquire, 0);
+            //break;
+        }
+        callParamCallbacks(0);
+
+		getIntegerParam(P_TrigSource, &trgSource);
+        if ((sis8300drv_trg_src)trgSource == trg_src_soft) {
+			/* XXX: Sleep for numTimePoint * timeStep seconds */
+			this->unlock();
+			epicsThreadSleep(numTimePoints * timeStep);
+			this->lock();
         }
     }
 
@@ -549,6 +568,16 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     	      setStringParam(P_Message, e.c_str());
     	      status = asynError;
     	}
+    } else if (function == P_Reset) {
+    	try {
+    		SIS8300DRV_CALL("sis8300drv_master_reset", sis8300drv_master_reset(mSisDevice));
+    	} catch (const std::string &e) {
+    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    	    	  "%s:%s: %s\n",
+    	          driverName, __func__, e.c_str());
+    	      setStringParam(P_Message, e.c_str());
+    	      status = asynError;
+    	}
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeInt32(pasynUser, value);
@@ -624,18 +653,26 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   */
 void ADSIS8300::report(FILE *fp, int details)
 {
+    int deviceType;
+    int firmwareVersion;
+    int memorySizeMb;
+    int serialNumber;
 
     fprintf(fp, "Struck           : %s\n", this->portName);
     fprintf(fp, "Device path      : %s\n", mSisDevicePath);
+	getIntegerParam(P_FirmwareVersion, &firmwareVersion);
+	getIntegerParam(P_SerialNumber, &serialNumber);
+	getIntegerParam(P_MemorySize, &memorySizeMb);
+	getIntegerParam(P_DeviceType, &deviceType);
 	fprintf(fp,
-			"Device type      : %s\n"
+			"Device type      : %X\n"
 			"Serial number    : %d\n"
 			"Firmware version : 0x%4X\n"
-			"Memory size      : %ld MB\n",
-			deviceTypes[mSisDeviceType-0x8300],
-			mSisSerialNumber,
-			mSisFirmwareVersion,
-			mSisMemorySizeMb);
+			"Memory size      : %d MB\n",
+			deviceType,
+			serialNumber,
+			firmwareVersion,
+			memorySizeMb);
     if (details > 0) {
         int numTimePoints, dataType;
         getIntegerParam(P_NumTimePoints, &numTimePoints);
@@ -649,20 +686,31 @@ void ADSIS8300::report(FILE *fp, int details)
 
 int ADSIS8300::initDevice()
 {
+    unsigned int deviceType;
+    unsigned int firmwareVersion;
+    unsigned long memorySizeMb;
+    unsigned int serialNumber;
+
 	try {
 		SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
-		SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &mSisSerialNumber));
-		SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &mSisFirmwareVersion));
-		mSisFirmwareVersion &= 0x0000FFFF;
-		SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &mSisDeviceType));
-		SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &mSisMemorySizeMb));
-		mSisMemorySizeMb /= (1024*1024);
-		printf("%s: Device is %s, serial no. %d, fw 0x%4X, mem size %ld MB\n",
+		SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &serialNumber));
+		SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &firmwareVersion));
+		firmwareVersion &= 0x0000FFFF;
+		SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &deviceType));
+		SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &memorySizeMb));
+		memorySizeMb /= (1024*1024);
+		printf("%s: Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
 				__func__,
-				deviceTypes[mSisDeviceType-0x8300],
-				mSisSerialNumber,
-				mSisFirmwareVersion,
-				mSisMemorySizeMb);
+				deviceType,
+				serialNumber,
+				firmwareVersion,
+				(unsigned int)memorySizeMb);
+
+		setIntegerParam(P_FirmwareVersion, firmwareVersion);
+		setIntegerParam(P_SerialNumber, serialNumber);
+		setIntegerParam(P_MemorySize, memorySizeMb);
+		setIntegerParam(P_DeviceType, deviceType);
+		callParamCallbacks(0);
 
 		SIS8300DRV_CALL("sis8300drv_init_adc", sis8300drv_init_adc(mSisDevice));
 	} catch (const std::string &e) {
