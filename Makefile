@@ -8,6 +8,11 @@ ifeq ($(BUILD_IOCS), YES)
 DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard iocs))
 iocs_DEPEND_DIRS += SIS8300App
 endif
+
+DIRS += vendor
+SIS8300App_DEPEND_DIRS += vendor
+
+
 include $(TOP)/configure/RULES_TOP
 
 uninstall: uninstall_iocs

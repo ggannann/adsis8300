@@ -20,11 +20,11 @@ LIBRARY_IOC = SIS8300
 #SRC_DIRS += $(TOP)/vendor/struck/lib/libSIS830x
 #LIB_SRCS += ad9510.c internal.c main.c rtmI2C.c si5338aSynth.c spiFlash.c
 # ESS library
-USR_INCLUDES += -I$(TOP)/vendor/ess/driver
-USR_INCLUDES += -I$(TOP)/vendor/ess/lib
-USR_INCLUDES += -I$(TOP)/vendor/ess/include
-SRC_DIRS += $(TOP)/vendor/ess/lib
-LIB_SRCS += sis8300drv_ad9510.c sis8300drv_flash.c sis8300drv_rtm.c sis8300drv_utils.c sis8300drv.c
+#USR_INCLUDES += -I$(TOP)/vendor/ess/driver
+#USR_INCLUDES += -I$(TOP)/vendor/ess/lib
+#USR_INCLUDES += -I$(TOP)/vendor/ess/include
+#SRC_DIRS += $(TOP)/vendor/ess/lib
+#LIB_SRCS += sis8300drv_ad9510.c sis8300drv_flash.c sis8300drv_rtm.c sis8300drv_utils.c sis8300drv.c
 
 # EPICS specfic headers and sources
 INC += ADSIS8300.h

@@ -1,44 +1,19 @@
+TOP=../../..
+include $(TOP)/configure/CONFIG
+#----------------------------------------
+#  ADD MACRO DEFINITIONS AFTER THIS LINE
+#=============================
 
-# shared liblary name
-NAME := sis8300drv
+INC += sis8300drv.h sis8300_defs.h sis8300_reg.h
 
-# output destinations
-TARGETSO := lib$(NAME).so
-TARGETA := lib$(NAME).a
-OBJDIR := obj
+LIBRARY_IOC = sis8300drv
 
-CCFLAGS := -fPIC -Wall -g
+LIB_SYS_LIBS += 
 
-LDFLAGS := -Wall -lpthread
-
-# files
-OBJS := sis8300drv      \
-	sis8300drv_ad9510   \
-	sis8300drv_flash    \
-	sis8300drv_rtm      \
-	sis8300drv_utils
-	
-	
-INCLUDES := . ../include
-
-LIBS :=
-
-###############################################################################
-
-# rules
-
-all: $(TARGETSO) $(TARGETA)
-
-clean:
-	rm -rf *~ $(TARGETA) $(TARGETSO) $(OBJDIR)
-
-$(TARGETSO): $(OBJS:%=$(OBJDIR)/%.o) 
-	gcc -shared $(LDFLAGS) $(LIBS:%=-l%) -o  $@ $^
-
-$(OBJDIR)/%.o: %.c
-	mkdir -p $(OBJDIR)
-	gcc -c $(CCFLAGS) $(INCLUDES:%=-I%) -o $@ $<
-
-$(TARGETA): $(OBJS:%=$(OBJDIR)/%.o) 
-	/usr/bin/ar -rcs		$@		$^ 
+sis8300drv_SRCS += sis8300drv_ad9510.c sis8300drv_flash.c sis8300drv_rtm.c sis8300drv_utils.c sis8300drv.c
+        
+        
+include $(TOP)/configure/RULES
+#----------------------------------------
+#  ADD RULES AFTER THIS LINE
 

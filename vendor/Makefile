@@ -1,7 +1,7 @@
-TOP = ../..
+TOP = ..
 include $(TOP)/configure/CONFIG
 
-DIRS += lib
+DIRS += ess
 
 include $(TOP)/configure/RULES_DIRS
 
