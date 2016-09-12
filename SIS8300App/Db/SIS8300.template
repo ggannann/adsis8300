@@ -374,6 +374,34 @@ record(mbbi, "$(P)$(R)RTMType_RBV") {
     field(TWST, "DWC8VM1")
 }
 
+record(bo, "$(P)$(R)RTMTempGet")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_RTM_TEMP_GET")
+    field(ZNAM, "Idle")
+    field(ONAM, "Get")
+#    field(PINI, "YES")
+#    field(VAL,  "0")
+}
+
+record(ai, "$(P)$(R)RTMTemp1_RBV")
+{
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_RTM_TEMP1")
+    field(PREC, "1")
+    field(EGU,  "C")
+    field(SCAN, "I/O Intr")
+}
+
+record(ai, "$(P)$(R)RTMTemp2_RBV")
+{
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_RTM_TEMP2")
+    field(PREC, "1")
+    field(EGU,  "C")
+    field(SCAN, "I/O Intr")
+}
 
 
 

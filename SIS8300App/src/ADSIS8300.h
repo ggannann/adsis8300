@@ -43,6 +43,9 @@
 #define SisSerialNumberString          "SIS_SERIAL_NUMBER"
 #define SisMemorySizeString            "SIS_MEMORY_SIZE"
 #define SisRTMTypeString               "SIS_RTM_TYPE"
+#define SisRTMTempGetString            "SIS_RTM_TEMP_GET"
+#define SisRTMTemp1String              "SIS_RTM_TEMP1"
+#define SisRTMTemp2String              "SIS_RTM_TEMP2"
 
 #define MAX_PATH_LEN                   32
 #define MAX_ERROR_STR_LEN              32
@@ -92,6 +95,9 @@ protected:
     int P_DeviceType;
     int P_MemorySize;
     int P_RTMType;
+    int P_RTMTempGet;
+    int P_RTMTemp1;
+    int P_RTMTemp2;
 
     int P_Dummy;
     #define LAST_SIS8300_PARAM P_Dummy

@@ -45,15 +45,18 @@ static const char *driverName = "ADSIS8300";
 //		"SIS8300L2",
 //};
 
-#define SIS8300DRV_CALL(s, x) {\
+#define SIS8300DRV_CALL(s, x) ({\
 	char message[256]; \
 	int ret = x; \
 	if (ret) {\
-        sprintf(message, "%s: %s() error: %s (%d)\n", \
+        sprintf(message, "%s: %s() error: %s (%d)", \
                 __func__, s, sis8300drv_strerror(ret), ret); \
-        throw std::string(message); \
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, \
+      	    	  "%s:%s: %s\n", driverName, __func__, message); \
+      	setStringParam(P_Message, message); \
 	} \
-}
+	ret; \
+})
 
 /**
  * Exit handler, delete the ADSIS8300 object.
@@ -151,6 +154,9 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     createParam(SisMemorySizeString,            asynParamInt32, &P_MemorySize);
     createParam(SisDeviceTypeString,            asynParamInt32, &P_DeviceType);
     createParam(SisRTMTypeString,               asynParamInt32, &P_RTMType);
+    createParam(SisRTMTemp1String,            asynParamFloat64, &P_RTMTemp1);
+    createParam(SisRTMTemp2String,            asynParamFloat64, &P_RTMTemp2);
+    createParam(SisRTMTempGetString,            asynParamInt32, &P_RTMTempGet);
 
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
@@ -162,6 +168,8 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(P_MemorySize, 0);
     status |= setIntegerParam(P_DeviceType, 0);
     status |= setIntegerParam(P_RTMType, 0);
+    status |= setDoubleParam(P_RTMTemp1, 0);
+    status |= setDoubleParam(P_RTMTemp2, 0);
 
     if (status) {
         printf("%s: unable to set parameters\n", functionName);
@@ -211,6 +219,7 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
     int ch;
     int i;
     double convFactor, convOffset;
+    int ret;
     
     getIntegerParam(NDDataType, (int *)&dataType);
     getIntegerParam(P_NumTimePoints, &numTimePoints);
@@ -241,24 +250,20 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
             continue;
         }
 
-        try {
-        	SIS8300DRV_CALL("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, ch, pRawData));
-        	getDoubleParam(ch, P_ConvFactor, &convFactor);
-        	getDoubleParam(ch, P_ConvOffset, &convOffset);
-            this->unlock();
-            printf("CH %d [%d] CF %f, CO %f: ", ch, numTimePoints, convFactor, convOffset);
-        	for (i = 0; i < numTimePoints; i++) {
-//        		printf("%d ", *(pRawData + i));
-        		pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)((double)*(pRawData + i) * convFactor + convOffset);
-        	}
-        	printf("\n");
-            this->lock();
-        } catch (std::string &e) {
-			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-			  "%s:%s: %s\n",
-			  driverName, __func__, e.c_str());
-			setStringParam(P_Message, e.c_str());
-        }
+		ret = SIS8300DRV_CALL("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, ch, pRawData));
+		if (ret) {
+			return ret;
+		}
+		getDoubleParam(ch, P_ConvFactor, &convFactor);
+		getDoubleParam(ch, P_ConvOffset, &convOffset);
+		this->unlock();
+		printf("CH %d [%d] CF %f, CO %f: ", ch, numTimePoints, convFactor, convOffset);
+		for (i = 0; i < numTimePoints; i++) {
+			//printf("%d ", *(pRawData + i));
+			pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)((double)*(pRawData + i) * convFactor + convOffset);
+		}
+		printf("\n");
+		this->lock();
     }
 
     return 0;
@@ -329,6 +334,7 @@ void ADSIS8300::sisTask()
     int trgRepeat;
     int trgCount;
     double acquireTime;
+    int ret;
     const char *functionName = "sisTask";
 
 	sleep(1);
@@ -388,31 +394,35 @@ void ADSIS8300::sisTask()
         }
 
 		printf("%s: 3 Acquiring = %d..\n", __func__, acquiring_);
-        try {
-			SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
-        } catch (std::string &e) {
-			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-			  "%s:%s: %s\n",
-			  driverName, __func__, e.c_str());
-			setStringParam(P_Message, e.c_str());
-        }
+		ret = SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
+		if (ret) {
+			acquiring_ = 0;
+			setIntegerParam(P_Acquire, 0);
+			this->unlock();
+			break;
+		}
 
         /* Trigger arrived */
         trgCount++;
         printf("%s: 5 Acquiring = %d..\n", __func__, acquiring_);
 
-        try {
-        	SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
-        } catch (std::string &e) {
-			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-			  "%s:%s: %s\n",
-			  driverName, __func__, e.c_str());
-			setStringParam(P_Message, e.c_str());
-        }
+       	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
+		if (ret) {
+			acquiring_ = 0;
+			setIntegerParam(P_Acquire, 0);
+			this->unlock();
+			break;
+		}
         printf("%s: 6 Acquiring = %d..\n", __func__, acquiring_);
 
         /* Get the data */
-        acquireArrays();
+        ret = acquireArrays();
+		if (ret) {
+			acquiring_ = 0;
+			setIntegerParam(P_Acquire, 0);
+			this->unlock();
+			break;
+		}
 
         pImage = this->pArrays[0];
 
@@ -461,7 +471,9 @@ void ADSIS8300::sisTask()
         }
     }
 
+    callParamCallbacks(0);
 	printf("Data thread is down!\n");
+	sleep(1);
 }
 
 /** Called when asyn clients call pasynInt32->write().
@@ -473,14 +485,12 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
     int function = pasynUser->reason;
     int addr;
-    epicsInt32 oldValue;
+    int ret;
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
     printf("%s: ENTER %d (%d) = %d\n", __func__, function, addr, value);
  
-    status = getIntegerParam(addr, function, &oldValue);
-
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
     status = setIntegerParam(addr, function, value);
@@ -488,98 +498,75 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     if (function == P_Acquire) {
         setAcquire(value);
     } else if (function == P_ClockSource) {
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)value));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
+   		ret = SIS8300DRV_CALL("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)value));
+   		if (ret) {
+   			status = asynError;
     	}
     } else if (function == P_ClockDiv) {
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)value));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+		ret = SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)value));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_TrigSource) {
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)value));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+   		ret = SIS8300DRV_CALL("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)value));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_TrigLine) {
-    	try {
-    		sis8300drv_trg_ext trgext = trg_ext_harlink;
-    		unsigned int trgmask = (1 << P_TrigLine);
-    		if (P_TrigLine > SIS8300DRV_NUM_FP_TRG) {
-    			trgext = trg_ext_mlvds;
-    			trgmask = (1 << (P_TrigLine - SIS8300DRV_NUM_FP_TRG));
-    		}
-    		SIS8300DRV_CALL("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+		sis8300drv_trg_ext trgext = trg_ext_harlink;
+		unsigned int trgmask = (1 << P_TrigLine);
+		if (P_TrigLine > SIS8300DRV_NUM_FP_TRG) {
+			trgext = trg_ext_mlvds;
+			trgmask = (1 << (P_TrigLine - SIS8300DRV_NUM_FP_TRG));
+		}
+   		ret = SIS8300DRV_CALL("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_TrigDelay) {
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, value));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+   		ret = SIS8300DRV_CALL("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, value));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_TrigDo) {
     	setAcquire(1);
     } else if (function == P_NumTimePoints) {
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, value));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+   		ret = SIS8300DRV_CALL("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, value));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_Enable) {
     	if (value) {
     		enableChannel(addr);
     	} else {
     		disableChannel(addr);
     	}
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_set_channel_mask", sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+   		ret = SIS8300DRV_CALL("sis8300drv_set_channel_mask", sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_Reset) {
-    	try {
-    		SIS8300DRV_CALL("sis8300drv_master_reset", sis8300drv_master_reset(mSisDevice));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+   		ret = SIS8300DRV_CALL("sis8300drv_master_reset", sis8300drv_master_reset(mSisDevice));
+		if (ret) {
+			status = asynError;
+		}
+    } else if (function == P_RTMTempGet) {
+		int RTMType = 0;
+		getIntegerParam(P_RTMType, &RTMType);
+		/* Only DWC8VM1 has attenuators */
+		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
+			double temp;
+			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_temperature_get", sis8300drv_i2c_rtm_temperature_get(mSisDevice, (sis8300drv_rtm)RTMType, rtm_temp_ad8363, &temp));
+			if (ret) {
+				status = asynError;
+			}
+			setDoubleParam(P_RTMTemp1, temp);
+			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_temperature_get", sis8300drv_i2c_rtm_temperature_get(mSisDevice, (sis8300drv_rtm)RTMType, rtm_temp_ltc2493, &temp));
+			if (ret) {
+				status = asynError;
+			}
+			setDoubleParam(P_RTMTemp2, temp);
+		}
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeInt32(pasynUser, value);
@@ -608,6 +595,7 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
     int function = pasynUser->reason;
     int addr;
+    int ret;
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
@@ -618,32 +606,22 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     status = setDoubleParam(addr, function, value);
 
     if (function == P_ClockFreq) {
-    	try {
-    		sis8300drv_clk_div clkdiv = 250000000.0 / value;
-    		SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+		sis8300drv_clk_div clkdiv = 250000000.0 / value;
+		ret = SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
+		if (ret) {
+			status = asynError;
+		}
     } else if (function == P_Attenuation) {
-    	try {
-    		int RTMType = 0;
-    		getIntegerParam(P_RTMType, &RTMType);
-    		/* Only DWC8VM1 has attenuators */
-    		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
-				int val = (int)((value + 31.5) * 2);
-				SIS8300DRV_CALL("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, val));
-    		}
-    	} catch (const std::string &e) {
-    	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-    	    	  "%s:%s: %s\n",
-    	          driverName, __func__, e.c_str());
-    	      setStringParam(P_Message, e.c_str());
-    	      status = asynError;
-    	}
+		int RTMType = 0;
+		getIntegerParam(P_RTMType, &RTMType);
+		/* Only DWC8VM1 has attenuators */
+		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
+			int val = (int)((value + 31.5) * 2);
+			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, val));
+			if (ret) {
+				status = asynError;
+			}
+		}
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_SIS8300_PARAM) status = asynNDArrayDriver::writeFloat64(pasynUser, value);
@@ -708,50 +686,57 @@ int ADSIS8300::initDevice()
     unsigned int firmwareVersion;
     unsigned long memorySizeMb;
     unsigned int serialNumber;
+    int ret;
 
-	try {
-		SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
-		SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &serialNumber));
-		SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &firmwareVersion));
-		firmwareVersion &= 0x0000FFFF;
-		SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &deviceType));
-		SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &memorySizeMb));
-		memorySizeMb /= (1024*1024);
-		printf("%s: Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
-				__func__,
-				deviceType,
-				serialNumber,
-				firmwareVersion,
-				(unsigned int)memorySizeMb);
-
-		setIntegerParam(P_FirmwareVersion, firmwareVersion);
-		setIntegerParam(P_SerialNumber, serialNumber);
-		setIntegerParam(P_MemorySize, memorySizeMb);
-		setIntegerParam(P_DeviceType, deviceType);
-		callParamCallbacks(0);
-
-		SIS8300DRV_CALL("sis8300drv_init_adc", sis8300drv_init_adc(mSisDevice));
-	} catch (const std::string &e) {
-	      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-	    	  "%s:%s: %s\n",
-	          driverName, __func__, e.c_str());
-	      setStringParam(P_Message, e.c_str());
+	ret = SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
+	if (ret) {
+		return ret;
 	}
+	ret = SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &serialNumber));
+	if (ret) {
+		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &firmwareVersion));
+	if (ret) {
+		return ret;
+	}
+	firmwareVersion &= 0x0000FFFF;
+	ret = SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &deviceType));
+	if (ret) {
+		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &memorySizeMb));
+	if (ret) {
+		return ret;
+	}
+	memorySizeMb /= (1024*1024);
+
+	ret = SIS8300DRV_CALL("sis8300drv_init_adc", sis8300drv_init_adc(mSisDevice));
+	if (ret) {
+		return ret;
+	}
+
+	setIntegerParam(P_FirmwareVersion, firmwareVersion);
+	setIntegerParam(P_SerialNumber, serialNumber);
+	setIntegerParam(P_MemorySize, memorySizeMb);
+	setIntegerParam(P_DeviceType, deviceType);
+	callParamCallbacks(0);
+
+	printf("%s: Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
+			__func__,
+			deviceType,
+			serialNumber,
+			firmwareVersion,
+			(unsigned int)memorySizeMb);
 
 	return 0;
 }
 
 int ADSIS8300::destroyDevice()
 {
-	try {
-		SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
-	} catch (const std::string &e) {
-		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-			"%s:%s: %s\n",
-	        driverName, __func__, e.c_str());
-	    setStringParam(P_Message, e.c_str());
-	}
-	return 0;
+	int ret;
+	ret = SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
+	return ret;
 }
 
 int ADSIS8300::enableChannel(unsigned int channel)
