@@ -123,10 +123,6 @@ private:
     char mSisDevicePath[MAX_PATH_LEN];
     sis8300drv_usr *mSisDevice;
     char mSisErrorStr[MAX_ERROR_STR_LEN];
-//    unsigned int mSisDeviceType;
-//    unsigned int mSisFirmwareVersion;
-//    unsigned long mSisMemorySizeMb;
-//    unsigned int mSisSerialNumber;
     unsigned int mSisFirmwareOptions;
     uint32_t mChannelMask;
     NDArray *mRawDataArray;

@@ -423,6 +423,7 @@ void ADSIS8300::sisTask()
 			this->unlock();
 			break;
 		}
+        printf("%s: 7 Acquiring = %d..\n", __func__, acquiring_);
 
         pImage = this->pArrays[0];
 
