@@ -103,6 +103,13 @@ int sis8300_dma_read(sis8300_dev *sisdevice, sis8300_buf *sisbuf, uint32_t offse
      * just DMA_READ_DONE interrupt. Now all interrupts are enabled during
      * device init. Revert to old behaviour if unexplainable things start happening. */
 
+     /* XXX: Reverting to old behavior because we could get DMA interrupt while servicing
+      * DAQ interrupt and DMA interrupt would thus not be cleared and handled resulting
+      * in read() not being woken. */
+    sis8300_register_write(sisdevice, IRQ_ENABLE, 0xFFFF0000);
+    /* Enable only DMA interrupt */
+    sis8300_register_write(sisdevice, IRQ_ENABLE, 1 << DMA_READ_DONE);
+
     /* Start dma transfer. */
     sisdevice->dma_irq_flag = SIS8300_IRQ_NONE;
     sis8300_register_write(sisdevice, DMA_READ_CTRL, 1 << DMA_READ_START);

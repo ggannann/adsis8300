@@ -43,5 +43,11 @@ irqreturn_t sis8300_isr(int irq, void *dev_id) {
         wake_up_all(&sisdevice->usr_irq_wait);
     }
 
+    sis8300_register_read(sisdevice, IRQ_STATUS, &intreg);
+    if (intreg) {
+        printk(KERN_ERR "%s: IRQ_STATUS %X : XXX PROBLEM!\n",
+        		sisdevice->name, intreg);
+    }
+
     return IRQ_HANDLED;
 }
