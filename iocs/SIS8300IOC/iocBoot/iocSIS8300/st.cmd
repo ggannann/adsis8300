@@ -49,9 +49,10 @@ asynSetMinTimerPeriod(0.001)
 epicsEnvSet("EPICS_CA_MAX_ARRAY_BYTES", "10000000")
 
 # Create an ADCimDetector driver
-# SIS8300Config(const char *portName, int numTimePoints, int dataType,
+# SIS8300Config(const char *portName, const char *devicePath, int numTimePoints, int dataType,
 #                      int maxBuffers, int maxMemory, int priority, int stackSize)
-SIS8300Config("$(PORT)", $(YSIZE), 7, 0, 0)
+#SIS8300Config("$(PORT)", "/dev/sis8300-2", $(YSIZE), 7, 0, 0)
+SIS8300Config("$(PORT)", "/dev/sis8300-1", $(YSIZE), 7, 0, 0)
 dbLoadRecords("$(ADSIS8300)/db/SIS8300.template",  "P=$(PREFIX),R=,  PORT=$(PORT),ADDR=0,TIMEOUT=1,AINELM=$(YSIZE)")
 dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=AI1:,PORT=$(PORT),ADDR=0,TIMEOUT=1,NAME=$(T1),AINELM=$(YSIZE)")
 dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=AI2:,PORT=$(PORT),ADDR=1,TIMEOUT=1,NAME=$(T2),AINELM=$(YSIZE)")
@@ -71,7 +72,7 @@ dbLoadRecords("NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,
 
 # Time series plugin
 NDTimeSeriesConfigure("TS1", $(QSIZE), 0, "$(PORT)", 0, 10)
-dbLoadRecords("$(ADCORE)/db/NDTimeSeries.template",  "P=$(PREFIX),R=TS:,   PORT=TS1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),NDARRAY_ADDR=0,NCHANS=$(TSPOINTS),TIME_LINK=$(PREFIX)det1:TimeStep CP MS,ENABLED=1")
+dbLoadRecords("$(ADCORE)/db/NDTimeSeries.template",  "P=$(PREFIX),R=TS:,   PORT=TS1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),NDARRAY_ADDR=0,NCHANS=$(TSPOINTS),TIME_LINK=$(PREFIX)TimeStep CP MS,ENABLED=1")
 dbLoadRecords("$(ADCORE)/db/NDTimeSeriesN.template", "P=$(PREFIX),R=TS:1:, PORT=TS1,ADDR=0,TIMEOUT=1,NCHANS=$(TSPOINTS),NAME=$(T1)")
 dbLoadRecords("$(ADCORE)/db/NDTimeSeriesN.template", "P=$(PREFIX),R=TS:2:, PORT=TS1,ADDR=1,TIMEOUT=1,NCHANS=$(TSPOINTS),NAME=$(T2)")
 dbLoadRecords("$(ADCORE)/db/NDTimeSeriesN.template", "P=$(PREFIX),R=TS:3:, PORT=TS1,ADDR=2,TIMEOUT=1,NCHANS=$(TSPOINTS),NAME=$(T3)")
