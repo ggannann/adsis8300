@@ -49,10 +49,12 @@ asynSetMinTimerPeriod(0.001)
 epicsEnvSet("EPICS_CA_MAX_ARRAY_BYTES", "10000000")
 
 # Create an ADCimDetector driver
-# SIS8300Config(const char *portName, const char *devicePath, int numTimePoints, int dataType,
-#                      int maxBuffers, int maxMemory, int priority, int stackSize)
+# SIS8300Config(const char *portName, const char *devicePath,
+#        int maxAddr, int numTimePoints, int dataType, int maxBuffers, int maxMemory,
+#        int priority, int stackSize)
 #SIS8300Config("$(PORT)", "/dev/sis8300-2", $(YSIZE), 7, 0, 0)
-SIS8300Config("$(PORT)", "/dev/sis8300-1", $(YSIZE), 7, 0, 0)
+#SIS8300Config("$(PORT)", "/dev/sis8300-1", $(YSIZE), 7, 0, 0)
+SIS8300Config("$(PORT)", "/dev/sis8300-1", 10, $(YSIZE), 7, 0, 0)
 dbLoadRecords("$(ADSIS8300)/db/SIS8300.template",  "P=$(PREFIX),R=,  PORT=$(PORT),ADDR=0,TIMEOUT=1,AINELM=$(YSIZE)")
 dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=AI1:,PORT=$(PORT),ADDR=0,TIMEOUT=1,NAME=$(T1),AINELM=$(YSIZE)")
 dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=AI2:,PORT=$(PORT),ADDR=1,TIMEOUT=1,NAME=$(T2),AINELM=$(YSIZE)")

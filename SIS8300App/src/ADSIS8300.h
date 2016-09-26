@@ -1,9 +1,9 @@
-/* SIS8300.cpp
+/* SIS8300.h
  *
  * This is a driver for a Struck SIS8300 digitizer.
  * Based on ADCSimDetector ADExample.
  *
- * Author: Hinko Koceavar
+ * Author: Hinko Kocevar
  *         ESS ERIC, Lund, Sweden
  *
  * Created:  September 11, 2016
@@ -55,9 +55,8 @@
 class epicsShareClass ADSIS8300 : public asynNDArrayDriver {
 public:
 	ADSIS8300(const char *portName, const char *devicePath,
-			int numTimePoints, NDDataType_t dataType,
-			int maxBuffers, size_t maxMemory,
-			int priority, int stackSize);
+			int maxAddr, int numParams, int numTimePoints, NDDataType_t dataType,
+			int maxBuffers, size_t maxMemory, int priority, int stackSize);
 	~ADSIS8300();
 
     /* These are the methods that we override from asynNDArrayDriver */
@@ -102,8 +101,6 @@ protected:
     int P_Dummy;
     #define LAST_SIS8300_PARAM P_Dummy
 
-
-private:
     /* These are the methods that are new to this class */
     template <typename epicsType> int acquireArraysT();
     int acquireArrays();
@@ -113,6 +110,12 @@ private:
     int enableChannel(unsigned int channel);
     int disableChannel(unsigned int channel);
 
+    sis8300drv_usr *mSisDevice;
+    uint32_t mChannelMask;
+    NDArray *mRawDataArray;
+
+private:
+
     /* Our data */
     epicsEventId startEventId_;
     epicsEventId stopEventId_;
@@ -121,11 +124,8 @@ private:
     double elapsedTime_;
 
     char mSisDevicePath[MAX_PATH_LEN];
-    sis8300drv_usr *mSisDevice;
     char mSisErrorStr[MAX_ERROR_STR_LEN];
     unsigned int mSisFirmwareOptions;
-    uint32_t mChannelMask;
-    NDArray *mRawDataArray;
 };
 
 
