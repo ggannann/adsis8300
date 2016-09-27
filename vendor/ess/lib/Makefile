@@ -4,7 +4,7 @@ include $(TOP)/configure/CONFIG
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
 
-INC += sis8300drv.h sis8300_defs.h sis8300_reg.h
+INC += sis8300drv.h sis8300_defs.h sis8300_reg.h sis8300drv_utils.h sis8300drv_list.h
 
 LIBRARY_IOC = sis8300drv
 

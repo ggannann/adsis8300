@@ -13,7 +13,8 @@
 #include <stdint.h>
 #include <epicsEvent.h>
 #include <epicsTime.h>
-#include "asynNDArrayDriver.h"
+
+#include <asynNDArrayDriver.h>
 
 #include <sis8300drv.h>
 

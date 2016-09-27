@@ -403,7 +403,7 @@ void ADSIS8300::sisTask()
 			break;
 		}
 
-        printf("%s::%s: 5 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        printf("%s::%s: 4 Acquiring = %d..\n", driverName, __func__, acquiring_);
        	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
 		if (ret) {
 			acquiring_ = 0;
@@ -414,7 +414,7 @@ void ADSIS8300::sisTask()
 
         /* Trigger arrived */
         trgCount++;
-        printf("%s::%s: 6 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        printf("%s::%s: 5 Acquiring = %d..\n", driverName, __func__, acquiring_);
 
         /* Get the data */
         ret = acquireArrays();
@@ -424,7 +424,7 @@ void ADSIS8300::sisTask()
 			this->unlock();
 			break;
 		}
-        printf("%s::%s: 7 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        printf("%s::%s: 6 Acquiring = %d..\n", driverName, __func__, acquiring_);
 
         pImage = this->pArrays[0];
 
@@ -562,6 +562,7 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 			if (ret) {
 				status = asynError;
 			}
+			usleep(200000);
 			setDoubleParam(P_RTMTemp1, temp);
 			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_temperature_get", sis8300drv_i2c_rtm_temperature_get(mSisDevice, (sis8300drv_rtm)RTMType, rtm_temp_ltc2493, &temp));
 			if (ret) {
