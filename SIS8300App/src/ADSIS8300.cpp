@@ -261,7 +261,7 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
 		printf("%s::%s: CH %d [%d] CF %f, CO %f: ", driverName, __func__,
 				ch, numTimePoints, convFactor, convOffset);
 		for (i = 0; i < numTimePoints; i++) {
-			//printf("%d ", *(pRawData + i));
+			printf("%d ", *(pRawData + i));
 			pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)((double)*(pRawData + i) * convFactor + convOffset);
 		}
 		printf("\n");
@@ -317,8 +317,70 @@ void ADSIS8300::setAcquire(int value)
     if (!value && acquiring_) {
         /* This was a command to stop acquisition */
         /* Send the stop event */
+
+    	disarmDevice();
+
         epicsEventSignal(this->stopEventId_); 
     }
+}
+
+int ADSIS8300::initDeviceDone()
+{
+	int ret;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+	ret = 0;
+
+	return ret;
+}
+
+int ADSIS8300::armDevice()
+{
+	int ret;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+	ret = SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
+
+	return ret;
+}
+
+int ADSIS8300::disarmDevice()
+{
+	int ret;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+	ret = SIS8300DRV_CALL("sis8300drv_disarm_device", sis8300drv_disarm_device(mSisDevice));
+	if (ret) {
+//		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_release_irq", sis8300drv_release_irq(mSisDevice, irq_type_usr));
+
+	return ret;
+}
+
+int ADSIS8300::waitForDevice()
+{
+	int ret;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
+
+	return ret;
+}
+
+int ADSIS8300::deviceDone()
+{
+	int ret;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+	ret = 0;
+
+	return ret;
 }
 
 /** This thread calls computeImage to compute new image data and does the callbacks to send it to higher layers.
@@ -355,6 +417,9 @@ void ADSIS8300::sisTask()
 
 	/* Loop forever */
     while (1) {
+
+taskStart:
+
 		printf("%s::%s: 0 Acquiring = %d..\n", driverName, __func__, acquiring_);
 
         /* Has acquisition been stopped? */
@@ -380,51 +445,85 @@ void ADSIS8300::sisTask()
        
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
+    		printf("%s::%s: 2a Acquiring = %d..\n", driverName, __func__, acquiring_);
+//        	ret = disarmDevice();
+
         	callParamCallbacks(0);
           /* Release the lock while we wait for an event that says acquire has started, then lock again */
             asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
                 "%s::%s: waiting for acquire to start\n", driverName, __func__);
-    		printf("%s::%s: 2a Acquiring = %d..\n", driverName, __func__, acquiring_);
+
+            printf("%s::%s: 2b Acquiring = %d..\n", driverName, __func__, acquiring_);
             this->unlock();
             status = epicsEventWait(this->startEventId_);
             this->lock();
             acquiring_ = 1;
             elapsedTime_ = 0.0;
         	trgCount = 0;
-    		printf("%s::%s: 2b Acquiring = %d..\n", driverName, __func__, acquiring_);
+    		printf("%s::%s: 2c Acquiring = %d..\n", driverName, __func__, acquiring_);
+
+    		ret = initDeviceDone();
+    		if (ret) {
+    			acquiring_ = 0;
+    			setIntegerParam(P_Acquire, 0);
+    			this->unlock();
+    			break;
+    		}
+    		printf("%s::%s: 2d Acquiring = %d..\n", driverName, __func__, acquiring_);
         }
 
 		printf("%s::%s: 3 Acquiring = %d..\n", driverName, __func__, acquiring_);
-		ret = SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
+		ret = armDevice();
 		if (ret) {
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-			this->unlock();
-			break;
+//			this->unlock();
+//			break;
+			goto taskStart;
 		}
 
+		/* Unlock while waiting for the device. */
+		this->unlock();
+
         printf("%s::%s: 4 Acquiring = %d..\n", driverName, __func__, acquiring_);
-       	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
+       	ret = waitForDevice();
+		if (ret) {
+			/* Lock after the wait failed. */
+			this->lock();
+			acquiring_ = 0;
+			setIntegerParam(P_Acquire, 0);
+//			this->unlock();
+//			break;
+			goto taskStart;
+		}
+
+		/* Lock after the device has finished acquisition. */
+		this->lock();
+
+        printf("%s::%s: 5 Acquiring = %d..\n", driverName, __func__, acquiring_);
+       	ret = deviceDone();
 		if (ret) {
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-			this->unlock();
-			break;
+//			this->unlock();
+//			break;
+			goto taskStart;
 		}
 
         /* Trigger arrived */
         trgCount++;
-        printf("%s::%s: 5 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        printf("%s::%s: 6 Acquiring = %d..\n", driverName, __func__, acquiring_);
 
         /* Get the data */
         ret = acquireArrays();
 		if (ret) {
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-			this->unlock();
-			break;
+//			this->unlock();
+//			break;
+			goto taskStart;
 		}
-        printf("%s::%s: 6 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        printf("%s::%s: 7 Acquiring = %d..\n", driverName, __func__, acquiring_);
 
         pImage = this->pArrays[0];
 
@@ -695,6 +794,8 @@ int ADSIS8300::initDevice()
     unsigned int serialNumber;
     int ret;
 
+    printf("%s::%s: Enter\n", driverName, __func__);
+
 	ret = SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
 	if (ret) {
 		return ret;
@@ -742,6 +843,9 @@ int ADSIS8300::initDevice()
 int ADSIS8300::destroyDevice()
 {
 	int ret;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
 	ret = SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
 	return ret;
 }

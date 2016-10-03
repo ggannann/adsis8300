@@ -104,12 +104,17 @@ protected:
 
     /* These are the methods that are new to this class */
     template <typename epicsType> int acquireArraysT();
-    int acquireArrays();
+    virtual int acquireArrays();
     void setAcquire(int value);
-    int initDevice();
-    int destroyDevice();
-    int enableChannel(unsigned int channel);
-    int disableChannel(unsigned int channel);
+    virtual int initDevice();
+    virtual int destroyDevice();
+    virtual int enableChannel(unsigned int channel);
+    virtual int disableChannel(unsigned int channel);
+    virtual int initDeviceDone();
+    virtual int armDevice();
+    virtual int disarmDevice();
+    virtual int waitForDevice();
+    virtual int deviceDone();
 
     sis8300drv_usr *mSisDevice;
     uint32_t mChannelMask;
