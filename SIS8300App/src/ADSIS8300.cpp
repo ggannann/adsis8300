@@ -179,7 +179,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 
     /* Create the thread that updates the images */
     status = (epicsThreadCreate("SisTask",
-                                epicsThreadPriorityMedium,
+                                epicsThreadPriorityHigh,
                                 epicsThreadGetStackSize(epicsThreadStackMedium),
                                 (EPICSTHREADFUNC)sisTaskC,
                                 this) == NULL);
