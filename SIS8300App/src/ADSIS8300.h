@@ -115,6 +115,7 @@ protected:
     virtual int disarmDevice();
     virtual int waitForDevice();
     virtual int deviceDone();
+    virtual int updateParameters();
 
     sis8300drv_usr *mSisDevice;
     uint32_t mChannelMask;

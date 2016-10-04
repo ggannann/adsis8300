@@ -87,7 +87,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 		int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName,
-    		maxAddr,
+    		SIS8300DRV_NUM_AI_CHANNELS+maxAddr,
     		NUM_SIS8300_PARAMS+numParams,
 			maxBuffers, maxMemory,
     		asynFloat32ArrayMask,
@@ -102,7 +102,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     int status = asynSuccess;
 
     printf("%s::%s: %d channels, %d parameters\n", driverName, __func__,
-    		maxAddr,NUM_SIS8300_PARAMS+numParams);
+    		SIS8300DRV_NUM_AI_CHANNELS+maxAddr,NUM_SIS8300_PARAMS+numParams);
 
     mRawDataArray = NULL;
 
@@ -326,11 +326,9 @@ void ADSIS8300::setAcquire(int value)
 
 int ADSIS8300::initDeviceDone()
 {
-	int ret;
+	int ret = 0;
 
 	printf("%s::%s: Enter\n", driverName, __func__);
-
-	ret = 0;
 
 	return ret;
 }
@@ -374,11 +372,18 @@ int ADSIS8300::waitForDevice()
 
 int ADSIS8300::deviceDone()
 {
-	int ret;
+	int ret = 0;
 
 	printf("%s::%s: Enter\n", driverName, __func__);
 
-	ret = 0;
+	return ret;
+}
+
+int ADSIS8300::updateParameters()
+{
+	int ret = 0;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
 
 	return ret;
 }
@@ -419,6 +424,17 @@ void ADSIS8300::sisTask()
     while (1) {
 
 taskStart:
+//		callParamCallbacks(0);
+
+		printf("%s::%s: Calling update parameters..\n", driverName, __func__);
+		ret = updateParameters();
+		if (ret) {
+			acquiring_ = 0;
+			setIntegerParam(P_Acquire, 0);
+		//			this->unlock();
+		//			break;
+//			goto taskStart;
+		}
 
 		printf("%s::%s: 0 Acquiring = %d..\n", driverName, __func__, acquiring_);
 
@@ -481,6 +497,7 @@ taskStart:
 //			break;
 			goto taskStart;
 		}
+		callParamCallbacks(0);
 
 		/* Unlock while waiting for the device. */
 		this->unlock();
@@ -547,7 +564,7 @@ taskStart:
         this->lock();
 
         /* Call the callbacks to update any changes */
-        for (i=0; i<SIS8300DRV_NUM_AI_CHANNELS; i++) {
+        for (i=0; i<maxAddr; i++) {
             callParamCallbacks(i);
         }
 
