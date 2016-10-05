@@ -49,7 +49,39 @@
 #define SisRTMTemp2String              "SIS_RTM_TEMP2"
 
 #define MAX_PATH_LEN                   32
-#define MAX_ERROR_STR_LEN              32
+#define MAX_ERROR_STR_LEN              256
+
+
+#define ADSIS8300_LOG(s) ({\
+	char __message[MAX_ERROR_STR_LEN]; \
+	snprintf(__message, MAX_ERROR_STR_LEN, "[INF] %s::%s: %s", \
+			driverName, __func__, s); \
+	asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, \
+			  "%s\n", __message); \
+	setStringParam(P_Message, __message); \
+})
+
+#define ADSIS8300_ERR(s) ({\
+	char __message[MAX_ERROR_STR_LEN]; \
+	snprintf(__message, MAX_ERROR_STR_LEN, "[ERR] %s::%s: %s", \
+			driverName, __func__, s); \
+	asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, \
+			  "%s\n", __message); \
+	setStringParam(P_Message, __message); \
+})
+
+#define SIS8300DRV_CALL(s, x) ({\
+	int __ret = x; \
+	if (__ret) {\
+		char __message[MAX_ERROR_STR_LEN]; \
+        snprintf(__message, MAX_ERROR_STR_LEN, "[ERR] %s::%s: %s() failed with '%s' (%d)", \
+                driverName, __func__, s, sis8300drv_strerror(__ret), __ret); \
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, \
+      	    	  "%s\n", __message); \
+      	setStringParam(P_Message, __message); \
+	} \
+	__ret; \
+})
 
 /** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
   * Inherits from asynNDArrayDriver */
@@ -131,7 +163,7 @@ private:
     double elapsedTime_;
 
     char mSisDevicePath[MAX_PATH_LEN];
-    char mSisErrorStr[MAX_ERROR_STR_LEN];
+//    char mSisErrorStr[MAX_ERROR_STR_LEN];
     unsigned int mSisFirmwareOptions;
 };
 

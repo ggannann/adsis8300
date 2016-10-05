@@ -39,19 +39,6 @@
 
 static const char *driverName = "ADSIS8300";
 
-#define SIS8300DRV_CALL(s, x) ({\
-	char message[256]; \
-	int ret = x; \
-	if (ret) {\
-        sprintf(message, "%s: %s() error: %s (%d)", \
-                __func__, s, sis8300drv_strerror(ret), ret); \
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, \
-      	    	  "%s:%s: %s\n", driverName, __func__, message); \
-      	setStringParam(P_Message, message); \
-	} \
-	ret; \
-})
-
 /**
  * Exit handler, delete the ADSIS8300 object.
  */
@@ -202,7 +189,7 @@ ADSIS8300::~ADSIS8300() {
 	this->lock();
 	printf("%s::%s: Data thread is already down!\n", driverName, __func__);
 	destroyDevice();
-
+	free(mSisDevice);
 	this->unlock();
 	printf("%s::%s: Shutdown complete!\n", driverName, __func__);
 }
