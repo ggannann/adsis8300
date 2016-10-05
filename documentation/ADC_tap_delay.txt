@@ -1,0 +1,30 @@
+Tuesday, October 4, 2016
+
+Hi Fredrik,
+
+in LLRF SW there is a ADC tap delay setting taking place for ch 0 and 1.
+I guess we should also set those for remaining channels, but IIRC this is not critical.
+
+Anyway, how do we determine the values?
+
+/Hinko
+
+Hi Hinko,
+
+ADC tap delay, is used to change the time when the FPGA samples the data from
+the ADCs, used to avoid sampling at the time when the adc sample is changing value.
+
+The only time you need to set or change this value is if you see that you have
+strange values on the sample input, it typically look like you have spurs among
+otherwise ok samples. Also if the bad sampling disappears when you lower the
+sampling frequency slightly, it could be time to change the tap-delay.
+
+If you need to change tap delay, you start at zero and increase by 1 until
+it becomes good and continues increasing by 1 until it becomes bad again,
+then you pick the value in the middle.
+
+In your case you put all tap delays to zero and check that you have good samples,
+if so, never set the tap-delay.
+ 
+
+/Fredrik
