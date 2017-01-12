@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <display typeId="org.csstudio.opibuilder.Display" version="1.0.0">
   <show_close_button>true</show_close_button>
   <rules />
@@ -9,7 +10,7 @@
   <macros>
     <include_parent_macros>true</include_parent_macros>
   </macros>
-  <boy_version>4.0.103.201507131348</boy_version>
+  <boy_version>4.0.103.201506251634</boy_version>
   <show_edit_range>true</show_edit_range>
   <widget_type>Display</widget_type>
   <auto_scale_widgets>
@@ -263,7 +264,6 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false" />
-      <show_scrollbar>false</show_scrollbar>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -453,7 +453,6 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false" />
-      <show_scrollbar>false</show_scrollbar>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -587,7 +586,6 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false" />
-      <show_scrollbar>false</show_scrollbar>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -721,60 +719,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T10)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R11)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T11)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R12)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T12)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R13)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T13)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R14)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T14)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R15)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T15)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R16)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
         </action>
       </actions>
       <font>
@@ -955,7 +899,6 @@ $(pv_value)</tooltip>
         <foreground_color>
           <color red="0" green="0" blue="0" />
         </foreground_color>
-        <actions hook="false" hook_all="false" />
         <font>
           <opifont.name fontName="Noto Sans" height="9" style="0">Default</opifont.name>
         </font>
@@ -997,7 +940,6 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false" />
-      <show_scrollbar>false</show_scrollbar>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -1038,7 +980,6 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false" />
-      <show_scrollbar>false</show_scrollbar>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -1131,7 +1072,6 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false" />
-      <show_scrollbar>false</show_scrollbar>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -1143,10 +1083,8 @@ $(pv_value)</tooltip>
 $(pv_value)</tooltip>
       <horizontal_alignment>0</horizontal_alignment>
       <rules />
-      <show_h_scroll>false</show_h_scroll>
       <pv_value />
       <auto_size>false</auto_size>
-      <read_only>false</read_only>
       <text></text>
       <rotation_angle>0.0</rotation_angle>
       <show_units>false</show_units>
@@ -1167,11 +1105,9 @@ $(pv_value)</tooltip>
       <actions hook="false" hook_all="false" />
       <border_style>3</border_style>
       <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
-      <show_native_border>true</show_native_border>
       <enabled>true</enabled>
       <wuid>21e74fc9:1546cf85e77:-76c2</wuid>
       <transparent>false</transparent>
-      <next_focus>0</next_focus>
       <scripts />
       <border_alarm_sensitive>false</border_alarm_sensitive>
       <scale_options>
@@ -1179,22 +1115,20 @@ $(pv_value)</tooltip>
         <height_scalable>true</height_scalable>
         <keep_wh_ratio>false</keep_wh_ratio>
       </scale_options>
-      <show_v_scroll>false</show_v_scroll>
       <backcolor_alarm_sensitive>false</backcolor_alarm_sensitive>
       <format_type>1</format_type>
       <limits_from_pv>false</limits_from_pv>
       <background_color>
         <color red="115" green="223" blue="255" />
       </background_color>
-      <password_input>false</password_input>
       <width>100</width>
       <x>135</x>
       <y>0</y>
-      <maximum>Infinity</maximum>
+      <maximum>1.7976931348623157E308</maximum>
       <foreground_color>
         <color red="0" green="0" blue="0" />
       </foreground_color>
-      <minimum>-Infinity</minimum>
+      <minimum>-1.7976931348623157E308</minimum>
       <font>
         <fontdata fontName="Noto Sans" height="11" style="0" />
       </font>
@@ -1236,7 +1170,6 @@ $(pv_value)</tooltip>
       <color red="10" green="0" blue="184" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="15" style="0" />
     </font>
@@ -1277,7 +1210,6 @@ $(pv_value)</tooltip>
       <color red="0" green="0" blue="0" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1318,7 +1250,6 @@ $(pv_value)</tooltip>
       <color red="0" green="0" blue="0" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1463,7 +1394,6 @@ $(pv_value)</tooltip>
       <color red="0" green="0" blue="0" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1507,7 +1437,6 @@ $(pv_value)</tooltip>
     <foreground_color>
       <color red="0" green="0" blue="0" />
     </foreground_color>
-    <actions hook="false" hook_all="false" />
     <font>
       <opifont.name fontName="Noto Sans" height="9" style="0">Default</opifont.name>
     </font>
@@ -1548,7 +1477,6 @@ $(pv_value)</tooltip>
       <color red="0" green="0" blue="0" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1612,10 +1540,8 @@ $(pv_value)</tooltip>
 $(pv_value)</tooltip>
     <horizontal_alignment>0</horizontal_alignment>
     <rules />
-    <show_h_scroll>false</show_h_scroll>
     <pv_value />
     <auto_size>false</auto_size>
-    <read_only>false</read_only>
     <text></text>
     <rotation_angle>0.0</rotation_angle>
     <show_units>false</show_units>
@@ -1636,11 +1562,9 @@ $(pv_value)</tooltip>
     <actions hook="false" hook_all="false" />
     <border_style>3</border_style>
     <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
-    <show_native_border>true</show_native_border>
     <enabled>true</enabled>
     <wuid>21e74fc9:1546cf85e77:-76d5</wuid>
     <transparent>false</transparent>
-    <next_focus>0</next_focus>
     <scripts />
     <border_alarm_sensitive>false</border_alarm_sensitive>
     <scale_options>
@@ -1648,22 +1572,20 @@ $(pv_value)</tooltip>
       <height_scalable>true</height_scalable>
       <keep_wh_ratio>false</keep_wh_ratio>
     </scale_options>
-    <show_v_scroll>false</show_v_scroll>
     <backcolor_alarm_sensitive>false</backcolor_alarm_sensitive>
     <format_type>2</format_type>
     <limits_from_pv>false</limits_from_pv>
     <background_color>
       <color red="115" green="223" blue="255" />
     </background_color>
-    <password_input>false</password_input>
     <width>100</width>
     <x>545</x>
     <y>199</y>
-    <maximum>Infinity</maximum>
+    <maximum>1.7976931348623157E308</maximum>
     <foreground_color>
       <color red="0" green="0" blue="0" />
     </foreground_color>
-    <minimum>-Infinity</minimum>
+    <minimum>-1.7976931348623157E308</minimum>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1704,7 +1626,6 @@ $(pv_value)</tooltip>
       <color red="0" green="0" blue="0" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1716,10 +1637,8 @@ $(pv_value)</tooltip>
 $(pv_value)</tooltip>
     <horizontal_alignment>0</horizontal_alignment>
     <rules />
-    <show_h_scroll>false</show_h_scroll>
     <pv_value />
     <auto_size>false</auto_size>
-    <read_only>false</read_only>
     <text></text>
     <rotation_angle>0.0</rotation_angle>
     <show_units>false</show_units>
@@ -1740,11 +1659,9 @@ $(pv_value)</tooltip>
     <actions hook="false" hook_all="false" />
     <border_style>3</border_style>
     <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
-    <show_native_border>true</show_native_border>
     <enabled>true</enabled>
     <wuid>21e74fc9:1546cf85e77:-76d0</wuid>
     <transparent>false</transparent>
-    <next_focus>0</next_focus>
     <scripts />
     <border_alarm_sensitive>false</border_alarm_sensitive>
     <scale_options>
@@ -1752,22 +1669,20 @@ $(pv_value)</tooltip>
       <height_scalable>true</height_scalable>
       <keep_wh_ratio>false</keep_wh_ratio>
     </scale_options>
-    <show_v_scroll>false</show_v_scroll>
     <backcolor_alarm_sensitive>false</backcolor_alarm_sensitive>
     <format_type>4</format_type>
     <limits_from_pv>false</limits_from_pv>
     <background_color>
       <color red="115" green="223" blue="255" />
     </background_color>
-    <password_input>false</password_input>
     <width>100</width>
     <x>545</x>
     <y>125</y>
-    <maximum>Infinity</maximum>
+    <maximum>1.7976931348623157E308</maximum>
     <foreground_color>
       <color red="0" green="0" blue="0" />
     </foreground_color>
-    <minimum>-Infinity</minimum>
+    <minimum>-1.7976931348623157E308</minimum>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
@@ -1808,7 +1723,6 @@ $(pv_value)</tooltip>
       <color red="0" green="0" blue="0" />
     </foreground_color>
     <actions hook="false" hook_all="false" />
-    <show_scrollbar>false</show_scrollbar>
     <font>
       <fontdata fontName="Noto Sans" height="11" style="0" />
     </font>
