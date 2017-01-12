@@ -5,7 +5,7 @@ sis8300drv-objs := sis8300.o sis8300_ioctl.o sis8300_read.o sis8300_write.o sis8
 obj-m := sis8300drv.o
 
 # Headers
-ccflags-y := -I $(src)/../include 
+ccflags-y := -I $(src)/../lib 
 
 current_dir := $(shell pwd)
 kernel_this := $(shell uname -r)
