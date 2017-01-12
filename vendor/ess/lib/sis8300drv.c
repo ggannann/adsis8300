@@ -1406,11 +1406,12 @@ int sis8300drv_arm_device(sis8300drv_usr *sisuser) {
         type = SIS8300DRV_TRG_ARM;
     }
 
-    if (!sisdevice->armed) {
+    if (!__sync_lock_test_and_set(&sisdevice->armed, 1)) {
         /* Reset sampling logic. */
         status = sis8300_reg_write(sisdevice->handle,
                 SIS8300_ACQUISITION_CONTROL_STATUS_REG, SIS8300DRV_RESET_ACQ);
         if (status) {
+            __sync_lock_release(&sisdevice->armed);
             pthread_mutex_unlock(&sisdevice->lock);
             return status_device_access;
         }
@@ -1420,6 +1421,7 @@ int sis8300drv_arm_device(sis8300drv_usr *sisuser) {
             status = sis8300_reg_read(sisdevice->handle,
                     SIS8300_ACQUISITION_CONTROL_STATUS_REG, &ui32_reg_val);
             if (status) {
+                __sync_lock_release(&sisdevice->armed);
                 pthread_mutex_unlock(&sisdevice->lock);
                 return status_device_access;
             }
@@ -1428,15 +1430,13 @@ int sis8300drv_arm_device(sis8300drv_usr *sisuser) {
         status = sis8300_reg_write(sisdevice->handle,
                 SIS8300_ACQUISITION_CONTROL_STATUS_REG, type);
         if (status) {
+            __sync_lock_release(&sisdevice->armed);
             pthread_mutex_unlock(&sisdevice->lock);
             return status_device_access;
         }
-        
-        sisdevice->armed = 1;
     }
 
     pthread_mutex_unlock(&sisdevice->lock);
-
     return status_success;
 }
 
@@ -1467,7 +1467,7 @@ int sis8300drv_disarm_device(sis8300drv_usr *sisuser) {
 
     pthread_mutex_lock(&sisdevice->lock);
 
-    sisdevice->armed = 0;
+    __sync_lock_release(&sisdevice->armed);
 
     status = sis8300_reg_write(sisdevice->handle,
                 SIS8300_ACQUISITION_CONTROL_STATUS_REG, SIS8300DRV_RESET_ACQ);
@@ -1592,7 +1592,7 @@ int sis8300drv_wait_acq_end(sis8300drv_usr *sisuser) {
         usleep(sisdevice->poll_period);
     } while (!status && sisdevice->armed && (ui32_reg_val & SIS8300DRV_ACQ_ACTIVE));
 
-    sisdevice->armed = 0;
+    __sync_lock_release(&sisdevice->armed);
 
     return status < 0 ? status_device_access : status_success;
 }
