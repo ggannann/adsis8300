@@ -619,10 +619,10 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		}
     } else if (function == P_TrigLine) {
 		sis8300drv_trg_ext trgext = trg_ext_harlink;
-		unsigned int trgmask = (1 << P_TrigLine);
-		if (P_TrigLine > SIS8300DRV_NUM_FP_TRG) {
+		unsigned int trgmask = (1 << value);
+		if (value >= SIS8300DRV_NUM_FP_TRG) {
 			trgext = trg_ext_mlvds;
-			trgmask = (1 << (P_TrigLine - SIS8300DRV_NUM_FP_TRG));
+			trgmask = (1 << (value - SIS8300DRV_NUM_FP_TRG));
 		}
    		ret = SIS8300DRV_CALL("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
 		if (ret) {
