@@ -70,7 +70,7 @@
 	setStringParam(P_Message, __message); \
 })
 
-#define SIS8300DRV_CALL(s, x) ({\
+#define SIS8300DRV_CALL_0(s, x) ({\
 	int __ret = x; \
 	if (__ret) {\
 		char __message[MAX_ERROR_STR_LEN]; \
@@ -81,6 +81,20 @@
       	setStringParam(P_Message, __message); \
 	} \
 	__ret; \
+})
+
+#define SIS8300DRV_CALL(s, x) ({\
+	int __ret = SIS8300DRV_CALL_0(s, x); \
+	__ret; \
+})
+
+#define SIS8300DRV_CALL_VOID(s, x) ({\
+	SIS8300DRV_CALL_0(s, x); \
+})
+
+#define SIS8300DRV_CALL_RET(s, x) ({\
+	int __ret = SIS8300DRV_CALL_0(s, x); \
+	if (__ret) { return __ret; } \
 })
 
 /** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
