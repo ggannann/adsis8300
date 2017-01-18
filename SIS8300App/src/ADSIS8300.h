@@ -49,36 +49,34 @@
 #define SisRTMTemp2String              "SIS_RTM_TEMP2"
 
 #define MAX_PATH_LEN                   32
-#define MAX_ERROR_STR_LEN              256
+#define MAX_LOG_STR_LEN                256
 
 
-#define ADSIS8300_LOG(s) ({\
-	char __message[MAX_ERROR_STR_LEN]; \
-	snprintf(__message, MAX_ERROR_STR_LEN, "[INF] %s::%s: %s", \
-			driverName, __func__, s); \
+#define ADSIS8300_LOG(p, s, t, r) ({\
+	if (t == 0) { \
+		snprintf(mSisLogStr, MAX_LOG_STR_LEN, "%s %s::%s: %s", \
+				p, driverName, __func__, s); \
+	} else if (t == 1) { \
+        snprintf(mSisLogStr, MAX_LOG_STR_LEN, "[ERR] %s::%s: %s() failed with '%s' (%d)", \
+                driverName, __func__, s, sis8300drv_strerror(r), r); \
+	} \
 	asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, \
-			  "%s\n", __message); \
-	setStringParam(P_Message, __message); \
+			  "%s\n", mSisLogStr); \
+	setStringParam(P_Message, mSisLogStr); \
+})
+
+#define ADSIS8300_INF(s) ({\
+	ADSIS8300_LOG("[INF]", s, 0, 0); \
 })
 
 #define ADSIS8300_ERR(s) ({\
-	char __message[MAX_ERROR_STR_LEN]; \
-	snprintf(__message, MAX_ERROR_STR_LEN, "[ERR] %s::%s: %s", \
-			driverName, __func__, s); \
-	asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, \
-			  "%s\n", __message); \
-	setStringParam(P_Message, __message); \
+	ADSIS8300_LOG("[ERR]", s, 0, 0); \
 })
 
 #define SIS8300DRV_CALL_0(s, x) ({\
 	int __ret = x; \
 	if (__ret) {\
-		char __message[MAX_ERROR_STR_LEN]; \
-        snprintf(__message, MAX_ERROR_STR_LEN, "[ERR] %s::%s: %s() failed with '%s' (%d)", \
-                driverName, __func__, s, sis8300drv_strerror(__ret), __ret); \
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, \
-      	    	  "%s\n", __message); \
-      	setStringParam(P_Message, __message); \
+		ADSIS8300_LOG("[ERR]", s, 1, __ret); \
 	} \
 	__ret; \
 })
@@ -166,6 +164,7 @@ protected:
     sis8300drv_usr *mSisDevice;
     uint32_t mChannelMask;
     NDArray *mRawDataArray;
+    char mSisLogStr[MAX_LOG_STR_LEN];
 
 private:
 
@@ -177,7 +176,6 @@ private:
     double elapsedTime_;
 
     char mSisDevicePath[MAX_PATH_LEN];
-//    char mSisErrorStr[MAX_ERROR_STR_LEN];
     unsigned int mSisFirmwareOptions;
 };
 

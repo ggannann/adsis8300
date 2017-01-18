@@ -149,7 +149,6 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(P_NumTimePoints, numTimePoints);
     status |= setIntegerParam(NDDataType, dataType);
     status |= setDoubleParam(P_TimeStep, 0.001);
-    status |= setStringParam(P_Message, "No error");
     status |= setIntegerParam(P_Acquire, 0);
     status |= setIntegerParam(P_FirmwareVersion, 0);
     status |= setIntegerParam(P_SerialNumber, 0);
@@ -158,6 +157,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(P_RTMType, 0);
     status |= setDoubleParam(P_RTMTemp1, 0);
     status |= setDoubleParam(P_RTMTemp2, 0);
+    ADSIS8300_INF("No error");
 
     if (status) {
         printf("%s::%s: unable to set parameters\n", driverName, __func__);
@@ -528,6 +528,8 @@ taskStart:
 			goto taskStart;
 		}
         printf("%s::%s: 7 Acquiring = %d..\n", driverName, __func__, acquiring_);
+
+        ADSIS8300_INF("No error");
 
         pImage = this->pArrays[0];
 
