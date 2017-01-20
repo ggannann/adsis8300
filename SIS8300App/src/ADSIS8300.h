@@ -147,7 +147,8 @@ protected:
     #define LAST_SIS8300_PARAM P_Dummy
 
     /* These are the methods that are new to this class */
-    template <typename epicsType> int acquireArraysT();
+    int acquireRawArrays();
+    template <typename epicsType> int convertArraysT();
     virtual int acquireArrays();
     void setAcquire(int value);
     virtual int initDevice();

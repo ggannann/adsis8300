@@ -195,64 +195,109 @@ ADSIS8300::~ADSIS8300() {
 }
 
 /** Template function to compute the simulated detector data for any data type */
-template <typename epicsType> int ADSIS8300::acquireArraysT()
+int ADSIS8300::acquireRawArrays()
 {
-    size_t dims[2], rawDims[1];
+    size_t dims[2];
+    int numTimePoints;
+    epicsUInt16 *pRaw, *pChRaw;
+    int aich, i;
+
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+    getIntegerParam(P_NumTimePoints, &numTimePoints);
+
+    /* raw data samples of a given channel are stored in sequence */
+    dims[0] = numTimePoints;
+    dims[1] = SIS8300DRV_NUM_AI_CHANNELS;
+
+    /* 0th NDArray is for raw data samples */
+    if (this->pArrays[0]) {
+    	this->pArrays[0]->release();
+    }
+    this->pArrays[0] = pNDArrayPool->alloc(2, dims, NDUInt16, 0, 0);
+    pRaw = (epicsUInt16 *)this->pArrays[0]->pData;
+    memset(pRaw, 0, SIS8300DRV_NUM_AI_CHANNELS * numTimePoints * sizeof(epicsUInt16));
+
+    for (aich = 0; aich < SIS8300DRV_NUM_AI_CHANNELS; aich++) {
+        if (!(mChannelMask & (1 << aich))) {
+            continue;
+        }
+    	pChRaw = pRaw + (aich * numTimePoints);
+
+		SIS8300DRV_CALL_RET("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, aich, pChRaw));
+
+		/* XXX DEBUG */
+		char fname[32];
+		sprintf(fname, "/tmp/raw_%d.txt", aich);
+		FILE *fp = fopen(fname, "w");
+		printf("%s::%s: CH %d [%d]: ", driverName, __func__, aich, numTimePoints);
+		for (i = 0; i < numTimePoints; i++) {
+//			printf("%u ", *(pChRaw + i));
+		fprintf(fp, "%u\n", *(pChRaw + i));
+		}
+		printf("\n");
+		fclose(fp);
+    }
+
+    return 0;
+}
+
+/** Template function to compute the simulated detector data for any data type */
+template <typename epicsType> int ADSIS8300::convertArraysT()
+{
+    size_t dims[2];
     int numTimePoints;
     NDDataType_t dataType;
-    epicsType *pData;
-    epicsUInt16 *pRawData;
-    double acquireTime;
-    double timeStep;
-    int ch;
-    int i;
+    epicsType *pData, *pVal;
+    epicsUInt16 *pRaw, *pChRaw;
+    int aich, i;
     double convFactor, convOffset;
-    int ret;
     
+	printf("%s::%s: Enter\n", driverName, __func__);
+
     getIntegerParam(NDDataType, (int *)&dataType);
     getIntegerParam(P_NumTimePoints, &numTimePoints);
-    getDoubleParam(P_AcquireTime, &acquireTime);
-    getDoubleParam(P_TimeStep, &timeStep);
 
+    /* 0th NDArray is for raw AI data samples */
+    pRaw = (epicsUInt16 *)this->pArrays[0]->pData;
+    if (! pRaw) {
+    	return -1;
+    }
+
+    /* converted AI data samples of all channel are interleaved */
     dims[0] = SIS8300DRV_NUM_AI_CHANNELS;
     dims[1] = numTimePoints;
 
-    if (this->pArrays[0]) this->pArrays[0]->release();
-    this->pArrays[0] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
-    pData = (epicsType *)this->pArrays[0]->pData;
+    /* 1th NDArray is for converted AI data samples */
+    if (this->pArrays[1]) {
+    	this->pArrays[1]->release();
+    }
+    this->pArrays[1] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
+    pData = (epicsType *)this->pArrays[1]->pData;
     memset(pData, 0, SIS8300DRV_NUM_AI_CHANNELS * numTimePoints * sizeof(epicsType));
 
-    /* raw data is always 16-bit, allocate for one channel */
-    if (mRawDataArray && (mRawDataArray->dims[0].size != (size_t)numTimePoints)) {
-    	mRawDataArray->release();
-    	mRawDataArray = NULL;
-    }
-    if (! mRawDataArray) {
-    	rawDims[0] = numTimePoints;
-        mRawDataArray = pNDArrayPool->alloc(1, rawDims, NDUInt16, 0, 0);
-    }
-	pRawData = (epicsUInt16 *)mRawDataArray->pData;
-
-    for (ch = 0; ch < SIS8300DRV_NUM_AI_CHANNELS; ch++) {
-        if (!(mChannelMask & (1 << ch))) {
+    for (aich = 0; aich < SIS8300DRV_NUM_AI_CHANNELS; aich++) {
+    	if (!(mChannelMask & (1 << aich))) {
             continue;
         }
+    	pChRaw = pRaw + (aich * numTimePoints);
+    	pVal = pData + aich;
 
-		ret = SIS8300DRV_CALL("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, ch, pRawData));
-		if (ret) {
-			return ret;
-		}
-		getDoubleParam(ch, P_ConvFactor, &convFactor);
-		getDoubleParam(ch, P_ConvOffset, &convOffset);
-		this->unlock();
-		printf("%s::%s: CH %d [%d] CF %f, CO %f: ", driverName, __func__,
-				ch, numTimePoints, convFactor, convOffset);
+		getDoubleParam(aich, P_ConvFactor, &convFactor);
+		getDoubleParam(aich, P_ConvOffset, &convOffset);
+
+		char fname[32];
+		sprintf(fname, "/tmp/%d.txt", aich);
+		FILE *fp = fopen(fname, "w");
+		printf("%s::%s: CH %d [%d] CF %f, CO %f: ", driverName, __func__, aich, numTimePoints, convFactor, convOffset);
 		for (i = 0; i < numTimePoints; i++) {
-			printf("%d ", *(pRawData + i));
-			pData[SIS8300DRV_NUM_AI_CHANNELS*i + ch] = (epicsType)((double)*(pRawData + i) * convFactor + convOffset);
+			*pVal = (epicsType)((double)*(pChRaw + i) * convFactor + convOffset);
+//			printf("%f ", (double)*pVal);
+			fprintf(fp, "%f\n", (double)*pVal);
+			pVal += SIS8300DRV_NUM_AI_CHANNELS;
 		}
 		printf("\n");
-		this->lock();
+		fclose(fp);
     }
 
     return 0;
@@ -262,32 +307,40 @@ template <typename epicsType> int ADSIS8300::acquireArraysT()
 int ADSIS8300::acquireArrays()
 {
     int dataType;
-    getIntegerParam(NDDataType, &dataType); 
+    int ret;
 
+	printf("%s::%s: Enter\n", driverName, __func__);
+
+    ret = acquireRawArrays();
+    if (ret) {
+    	return ret;
+    }
+
+    getIntegerParam(NDDataType, &dataType); 
     switch (dataType) {
         case NDInt8:
-            return acquireArraysT<epicsInt8>();
+            return convertArraysT<epicsInt8>();
             break;
         case NDUInt8:
-        	return acquireArraysT<epicsUInt8>();
+        	return convertArraysT<epicsUInt8>();
             break;
         case NDInt16:
-        	return acquireArraysT<epicsInt16>();
+        	return convertArraysT<epicsInt16>();
             break;
         case NDUInt16:
-        	return acquireArraysT<epicsUInt16>();
+        	return convertArraysT<epicsUInt16>();
             break;
         case NDInt32:
-        	return acquireArraysT<epicsInt32>();
+        	return convertArraysT<epicsInt32>();
             break;
         case NDUInt32:
-        	return acquireArraysT<epicsUInt32>();
+        	return convertArraysT<epicsUInt32>();
             break;
         case NDFloat32:
-        	return acquireArraysT<epicsFloat32>();
+        	return convertArraysT<epicsFloat32>();
             break;
         case NDFloat64:
-        	return acquireArraysT<epicsFloat64>();
+        	return convertArraysT<epicsFloat64>();
             break;
         default:
         	return -1;
@@ -380,16 +433,16 @@ int ADSIS8300::updateParameters()
 void ADSIS8300::sisTask()
 {
     int status = asynSuccess;
-    NDArray *pImage;
+    NDArray *pData;
     epicsTimeStamp frameTime;
-    int numTimePoints;
+//    int numTimePoints;
     int arrayCounter;
-    double timeStep;
-    int i;
-    int trgSource;
+//    double timeStep;
+    int i, a;
+//    int trgSource;
     int trgRepeat;
     int trgCount;
-    double acquireTime;
+//    double acquireTime;
     int ret;
 
 	sleep(1);
@@ -531,51 +584,77 @@ taskStart:
 
         ADSIS8300_INF("No error");
 
-        pImage = this->pArrays[0];
-
-        /* Put the frame number and time stamp into the buffer */
-        pImage->uniqueId = uniqueId_++;
+        epicsTimeGetCurrent(&frameTime);
         getIntegerParam(NDArrayCounter, &arrayCounter);
         arrayCounter++;
         setIntegerParam(NDArrayCounter, arrayCounter);
-        epicsTimeGetCurrent(&frameTime);
-        pImage->timeStamp = frameTime.secPastEpoch + frameTime.nsec / 1.e9;
-        updateTimeStamp(&pImage->epicsTS);
+        for (a = 0; a < 3; a++) {
+            pData = this->pArrays[a];
+            if (! pData) {
+            	continue;
+            }
 
-        /* Get any attributes that have been defined for this driver */
-        this->getAttributes(pImage->pAttributeList);
+            /* Put the frame number and time stamp into the buffer */
+            pData->uniqueId = uniqueId_++;
+            pData->timeStamp = frameTime.secPastEpoch + frameTime.nsec / 1.e9;
+            updateTimeStamp(&pData->epicsTS);
 
-        /* Call the NDArray callback */
-        /* Must release the lock here, or we can get into a deadlock, because we can
-         * block on the plugin lock, and the plugin can be calling us */
-        this->unlock();
-        doCallbacksGenericPointer(pImage, NDArrayData, 0);
-        this->lock();
+            /* Get any attributes that have been defined for this driver */
+            this->getAttributes(pData->pAttributeList);
+
+            /* Call the NDArray callback */
+            /* Must release the lock here, or we can get into a deadlock, because we can
+             * block on the plugin lock, and the plugin can be calling us */
+            this->unlock();
+            doCallbacksGenericPointer(pData, NDArrayData, a);
+            this->lock();
+        }
+//
+//        pData = this->pArrays[1];
+//
+//        /* Put the frame number and time stamp into the buffer */
+//        pData->uniqueId = uniqueId_++;
+//        getIntegerParam(NDArrayCounter, &arrayCounter);
+//        arrayCounter++;
+//        setIntegerParam(NDArrayCounter, arrayCounter);
+//        epicsTimeGetCurrent(&frameTime);
+//        pData->timeStamp = frameTime.secPastEpoch + frameTime.nsec / 1.e9;
+//        updateTimeStamp(&pData->epicsTS);
+//
+//        /* Get any attributes that have been defined for this driver */
+//        this->getAttributes(pData->pAttributeList);
+//
+//        /* Call the NDArray callback */
+//        /* Must release the lock here, or we can get into a deadlock, because we can
+//         * block on the plugin lock, and the plugin can be calling us */
+//        this->unlock();
+//        doCallbacksGenericPointer(pData, NDArrayData, 0);
+//        this->lock();
 
         /* Call the callbacks to update any changes */
         for (i=0; i<maxAddr; i++) {
             callParamCallbacks(i);
         }
 
-		getIntegerParam(P_NumTimePoints, &numTimePoints);
-        getDoubleParam(P_TimeStep, &timeStep);
-        getDoubleParam(P_AcquireTime, &acquireTime);
-        elapsedTime_ += (timeStep * numTimePoints);
-        setDoubleParam(P_ElapsedTime, elapsedTime_);
-        if ((acquireTime > 0) && (elapsedTime_ > acquireTime)) {
-            setAcquire(0);
-            setIntegerParam(P_Acquire, 0);
-            //break;
-        }
-        callParamCallbacks(0);
+//		getIntegerParam(P_NumTimePoints, &numTimePoints);
+//        getDoubleParam(P_TimeStep, &timeStep);
+//        getDoubleParam(P_AcquireTime, &acquireTime);
+//        elapsedTime_ += (timeStep * numTimePoints);
+//        setDoubleParam(P_ElapsedTime, elapsedTime_);
+//        if ((acquireTime > 0) && (elapsedTime_ > acquireTime)) {
+//            setAcquire(0);
+//            setIntegerParam(P_Acquire, 0);
+//            //break;
+//        }
+//        callParamCallbacks(0);
 
-		getIntegerParam(P_TrigSource, &trgSource);
-        if ((sis8300drv_trg_src)trgSource == trg_src_soft) {
-			/* XXX: Sleep for numTimePoint * timeStep seconds */
-			this->unlock();
-			epicsThreadSleep(numTimePoints * timeStep);
-			this->lock();
-        }
+//		getIntegerParam(P_TrigSource, &trgSource);
+//        if ((sis8300drv_trg_src)trgSource == trg_src_soft) {
+//			/* XXX: Sleep for numTimePoint * timeStep seconds */
+//			this->unlock();
+//			epicsThreadSleep(numTimePoints * timeStep);
+//			this->lock();
+//        }
     }
 
     callParamCallbacks(0);
