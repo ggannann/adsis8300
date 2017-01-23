@@ -74,7 +74,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 		int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName,
-    		SIS8300DRV_NUM_AI_CHANNELS+maxAddr,
+    		maxAddr,
     		NUM_SIS8300_PARAMS+numParams,
 			maxBuffers, maxMemory,
     		asynFloat32ArrayMask,
@@ -88,10 +88,11 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 {
     int status = asynSuccess;
 
-    printf("%s::%s: %d channels, %d parameters\n", driverName, __func__,
-    		SIS8300DRV_NUM_AI_CHANNELS+maxAddr,NUM_SIS8300_PARAMS+numParams);
+    printf("%s::%s: %d addresses, %d parameters\n", driverName, __func__,
+    		maxAddr, NUM_SIS8300_PARAMS+numParams);
 
     mRawDataArray = NULL;
+    mNumArrays = 1;
 
 	/* Create an EPICS exit handler */
 	epicsAtExit(exitHandler, this);
@@ -208,17 +209,17 @@ int ADSIS8300::acquireRawArrays()
 
     /* raw data samples of a given channel are stored in sequence */
     dims[0] = numTimePoints;
-    dims[1] = SIS8300DRV_NUM_AI_CHANNELS;
+    dims[1] = ADSIS8300_NUM_CHANNELS;
 
-    /* 0th NDArray is for raw data samples */
-    if (this->pArrays[0]) {
-    	this->pArrays[0]->release();
+    /* local NDArray is for raw data samples */
+    if (mRawDataArray) {
+    	mRawDataArray->release();
     }
-    this->pArrays[0] = pNDArrayPool->alloc(2, dims, NDUInt16, 0, 0);
-    pRaw = (epicsUInt16 *)this->pArrays[0]->pData;
-    memset(pRaw, 0, SIS8300DRV_NUM_AI_CHANNELS * numTimePoints * sizeof(epicsUInt16));
+    mRawDataArray = pNDArrayPool->alloc(2, dims, NDUInt16, 0, 0);
+    pRaw = (epicsUInt16 *)mRawDataArray->pData;
+    memset(pRaw, 0, ADSIS8300_NUM_CHANNELS * numTimePoints * sizeof(epicsUInt16));
 
-    for (aich = 0; aich < SIS8300DRV_NUM_AI_CHANNELS; aich++) {
+    for (aich = 0; aich < ADSIS8300_NUM_CHANNELS; aich++) {
         if (!(mChannelMask & (1 << aich))) {
             continue;
         }
@@ -227,16 +228,16 @@ int ADSIS8300::acquireRawArrays()
 		SIS8300DRV_CALL_RET("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, aich, pChRaw));
 
 		/* XXX DEBUG */
-		char fname[32];
-		sprintf(fname, "/tmp/raw_%d.txt", aich);
-		FILE *fp = fopen(fname, "w");
+//		char fname[32];
+//		sprintf(fname, "/tmp/raw_%d.txt", aich);
+//		FILE *fp = fopen(fname, "w");
 		printf("%s::%s: CH %d [%d]: ", driverName, __func__, aich, numTimePoints);
 		for (i = 0; i < numTimePoints; i++) {
 //			printf("%u ", *(pChRaw + i));
-		fprintf(fp, "%u\n", *(pChRaw + i));
+//		fprintf(fp, "%u\n", *(pChRaw + i));
 		}
 		printf("\n");
-		fclose(fp);
+//		fclose(fp);
     }
 
     return 0;
@@ -258,25 +259,25 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
     getIntegerParam(NDDataType, (int *)&dataType);
     getIntegerParam(P_NumTimePoints, &numTimePoints);
 
-    /* 0th NDArray is for raw AI data samples */
-    pRaw = (epicsUInt16 *)this->pArrays[0]->pData;
-    if (! pRaw) {
+    /* local NDArray is for raw AI data samples */
+    if (! mRawDataArray) {
     	return -1;
     }
+    pRaw = (epicsUInt16 *)mRawDataArray->pData;
 
     /* converted AI data samples of all channel are interleaved */
-    dims[0] = SIS8300DRV_NUM_AI_CHANNELS;
+    dims[0] = ADSIS8300_NUM_CHANNELS;
     dims[1] = numTimePoints;
 
-    /* 1th NDArray is for converted AI data samples */
-    if (this->pArrays[1]) {
-    	this->pArrays[1]->release();
+    /* 0th NDArray is for converted AI data samples */
+    if (this->pArrays[0]) {
+    	this->pArrays[0]->release();
     }
-    this->pArrays[1] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
-    pData = (epicsType *)this->pArrays[1]->pData;
-    memset(pData, 0, SIS8300DRV_NUM_AI_CHANNELS * numTimePoints * sizeof(epicsType));
+    this->pArrays[0] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
+    pData = (epicsType *)this->pArrays[0]->pData;
+    memset(pData, 0, ADSIS8300_NUM_CHANNELS * numTimePoints * sizeof(epicsType));
 
-    for (aich = 0; aich < SIS8300DRV_NUM_AI_CHANNELS; aich++) {
+    for (aich = 0; aich < ADSIS8300_NUM_CHANNELS; aich++) {
     	if (!(mChannelMask & (1 << aich))) {
             continue;
         }
@@ -286,18 +287,18 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
 		getDoubleParam(aich, P_ConvFactor, &convFactor);
 		getDoubleParam(aich, P_ConvOffset, &convOffset);
 
-		char fname[32];
-		sprintf(fname, "/tmp/%d.txt", aich);
-		FILE *fp = fopen(fname, "w");
+//		char fname[32];
+//		sprintf(fname, "/tmp/%d.txt", aich);
+//		FILE *fp = fopen(fname, "w");
 		printf("%s::%s: CH %d [%d] CF %f, CO %f: ", driverName, __func__, aich, numTimePoints, convFactor, convOffset);
 		for (i = 0; i < numTimePoints; i++) {
 			*pVal = (epicsType)((double)*(pChRaw + i) * convFactor + convOffset);
 //			printf("%f ", (double)*pVal);
-			fprintf(fp, "%f\n", (double)*pVal);
-			pVal += SIS8300DRV_NUM_AI_CHANNELS;
+//			fprintf(fp, "%f\n", (double)*pVal);
+			pVal += ADSIS8300_NUM_CHANNELS;
 		}
 		printf("\n");
-		fclose(fp);
+//		fclose(fp);
     }
 
     return 0;
@@ -588,11 +589,11 @@ taskStart:
         getIntegerParam(NDArrayCounter, &arrayCounter);
         arrayCounter++;
         setIntegerParam(NDArrayCounter, arrayCounter);
-        for (a = 0; a < 3; a++) {
-            pData = this->pArrays[a];
-            if (! pData) {
+        for (a = 0; a < mNumArrays; a++) {
+            if (! this->pArrays[a]) {
             	continue;
             }
+            pData = this->pArrays[a];
 
             /* Put the frame number and time stamp into the buffer */
             pData->uniqueId = uniqueId_++;

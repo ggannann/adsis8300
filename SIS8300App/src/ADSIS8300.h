@@ -50,6 +50,7 @@
 
 #define MAX_PATH_LEN                   32
 #define MAX_LOG_STR_LEN                256
+#define ADSIS8300_NUM_CHANNELS         10
 
 
 #define ADSIS8300_LOG(p, s, t, r) ({\
@@ -166,6 +167,7 @@ protected:
     uint32_t mChannelMask;
     NDArray *mRawDataArray;
     char mSisLogStr[MAX_LOG_STR_LEN];
+    int mNumArrays;
 
 private:
 
