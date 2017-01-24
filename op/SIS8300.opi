@@ -914,17 +914,18 @@ $(pv_value)</tooltip>
         <path>NDPluginTimeSeries.opi</path>
         <macros>
           <include_parent_macros>true</include_parent_macros>
-          <R>TS:</R>
-          <R1>TS:1:</R1>
-          <R2>TS:2:</R2>
-          <R3>TS:3:</R3>
-          <R4>TS:4:</R4>
-          <R5>TS:5:</R5>
-          <R6>TS:6:</R6>
-          <R7>TS:7:</R7>
-          <R8>TS:8:</R8>
-          <R9>TS:9:</R9>
-          <R10>TS:10:</R10>
+          <R>TS0:</R>
+          <R0>TS0:0:</R0>
+          <R1>TS0:1:</R1>
+          <R2>TS0:2:</R2>
+          <R3>TS0:3:</R3>
+          <R4>TS0:4:</R4>
+          <R5>TS0:5:</R5>
+          <R6>TS0:6:</R6>
+          <R7>TS0:7:</R7>
+          <R8>TS0:8:</R8>
+          <R9>TS0:9:</R9>
+          <T0>Ch0</T0>
           <T1>Ch1</T1>
           <T2>Ch2</T2>
           <T3>Ch3</T3>
@@ -934,7 +935,6 @@ $(pv_value)</tooltip>
           <T7>Ch7</T7>
           <T8>Ch8</T8>
           <T9>Ch9</T9>
-          <T10>Ch10</T10>
         </macros>
         <replace>0</replace>
         <description>Time series</description>
@@ -1028,7 +1028,8 @@ $(pv_value)</tooltip>
         <path>NDFFT16.opi</path>
         <macros>
           <include_parent_macros>true</include_parent_macros>
-          <RTS>TS:</RTS>
+          <RTS>TS0:</RTS>
+          <R0>FFT0:</R0>
           <R1>FFT1:</R1>
           <R2>FFT2:</R2>
           <R3>FFT3:</R3>
@@ -1038,7 +1039,7 @@ $(pv_value)</tooltip>
           <R7>FFT7:</R7>
           <R8>FFT8:</R8>
           <R9>FFT9:</R9>
-          <R10>FFT10:</R10>
+          <T0>Ch0</T0>
           <T1>Ch1</T1>
           <T2>Ch2</T2>
           <T3>Ch3</T3>
@@ -1048,7 +1049,6 @@ $(pv_value)</tooltip>
           <T7>Ch7</T7>
           <T8>Ch8</T8>
           <T9>Ch9</T9>
-          <T10>Ch10</T10>
         </macros>
         <replace>0</replace>
         <description>FFT 16</description>
@@ -3276,7 +3276,7 @@ $(pv_value)</tooltip>
       <keep_wh_ratio>false</keep_wh_ratio>
     </scale_options>
     <visible>true</visible>
-    <pv_name>$(P)$(R)NumTimePoints_RBV</pv_name>
+    <pv_name>$(P)$(R)NumAiSamples_RBV</pv_name>
     <vertical_alignment>1</vertical_alignment>
     <border_color>
       <color red="0" green="128" blue="255" />
@@ -3317,7 +3317,7 @@ $(pv_value)</tooltip>
     <multiline_input>false</multiline_input>
     <border_width>1</border_width>
     <visible>true</visible>
-    <pv_name>$(P)$(R)NumTimePoints</pv_name>
+    <pv_name>$(P)$(R)NumAiSamples</pv_name>
     <selector_type>0</selector_type>
     <border_color>
       <color red="0" green="128" blue="255" />
@@ -3367,7 +3367,7 @@ $(pv_value)</tooltip>
     <wuid>-7341a290:157038013ee:-6442</wuid>
     <transparent>true</transparent>
     <auto_size>false</auto_size>
-    <text># Time Points</text>
+    <text># AI Samples</text>
     <scripts />
     <height>20</height>
     <border_width>1</border_width>

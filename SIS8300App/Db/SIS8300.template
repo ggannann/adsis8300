@@ -64,18 +64,18 @@ record(bi, "$(P)$(R)Acquire_RBV")
     field(SCAN, "I/O Intr")
 }
 
-record(longout, "$(P)$(R)NumTimePoints")
+record(longout, "$(P)$(R)NumAiSamples")
 {
     field(PINI, "YES")
     field(DTYP, "asynInt32")
-    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_NUM_TIME_POINTS")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_NUM_AI_SAMPLES")
     info(autosaveFields, "VAL")
 }
 
-record(longin, "$(P)$(R)NumTimePoints_RBV")
+record(longin, "$(P)$(R)NumAiSamples_RBV")
 {
     field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_NUM_TIME_POINTS")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_NUM_AI_SAMPLES")
     field(SCAN, "I/O Intr")
 }
 

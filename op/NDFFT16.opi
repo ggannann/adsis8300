@@ -518,6 +518,16 @@ $(pv_value)</tooltip>
           <path>NDFFTFreqSpectrumPlot.opi</path>
           <macros>
             <include_parent_macros>true</include_parent_macros>
+            <R>$(R0)</R>
+            <S>FFTAbsValue</S>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
+        <action type="OPEN_DISPLAY">
+          <path>NDFFTFreqSpectrumPlot.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
             <R>$(R1)</R>
             <S>FFTAbsValue</S>
           </macros>
@@ -663,16 +673,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T15)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDFFTFreqSpectrumPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <R>$(R16)</R>
-            <S>FFTAbsValue</S>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
         </action>
       </actions>
       <font>
@@ -723,6 +723,16 @@ $(pv_value)</tooltip>
           <path>NDFFTFreqSpectrumPlot.opi</path>
           <macros>
             <include_parent_macros>true</include_parent_macros>
+            <R>$(R0)</R>
+            <S>FFTReal</S>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
+        <action type="OPEN_DISPLAY">
+          <path>NDFFTFreqSpectrumPlot.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
             <R>$(R1)</R>
             <S>FFTReal</S>
           </macros>
@@ -868,16 +878,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T15)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDFFTFreqSpectrumPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <R>$(R16)</R>
-            <S>FFTReal</S>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
         </action>
       </actions>
       <font>
@@ -928,6 +928,16 @@ $(pv_value)</tooltip>
           <path>NDFFTFreqSpectrumPlot.opi</path>
           <macros>
             <include_parent_macros>true</include_parent_macros>
+            <R>$(R0)</R>
+            <S>FFTImaginary</S>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
+        <action type="OPEN_DISPLAY">
+          <path>NDFFTFreqSpectrumPlot.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
             <R>$(R1)</R>
             <S>FFTImaginary</S>
           </macros>
@@ -1073,16 +1083,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T15)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDFFTFreqSpectrumPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <R>$(R16)</R>
-            <S>FFTImaginary</S>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
         </action>
       </actions>
       <font>
@@ -1133,6 +1133,15 @@ $(pv_value)</tooltip>
           <path>NDFFTPlotAll.opi</path>
           <macros>
             <include_parent_macros>true</include_parent_macros>
+            <R>$(R0)</R>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
+        <action type="OPEN_DISPLAY">
+          <path>NDFFTPlotAll.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
             <R>$(R1)</R>
           </macros>
           <replace>0</replace>
@@ -1263,15 +1272,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T15)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDFFTPlotAll.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <R>$(R16)</R>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
         </action>
       </actions>
       <font>
@@ -1322,6 +1322,15 @@ $(pv_value)</tooltip>
           <path>NDFFTTimeSeriesPlot.opi</path>
           <macros>
             <include_parent_macros>true</include_parent_macros>
+            <R>$(R0)</R>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
+        <action type="OPEN_DISPLAY">
+          <path>NDFFTTimeSeriesPlot.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
             <R>$(R1)</R>
           </macros>
           <replace>0</replace>
@@ -1453,15 +1462,6 @@ $(pv_value)</tooltip>
           <replace>0</replace>
           <description>$(T15)</description>
         </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDFFTTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <R>$(R16)</R>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
-        </action>
       </actions>
       <font>
         <opifont.name fontName="Noto Sans" height="9" style="0">Default</opifont.name>
@@ -1507,6 +1507,16 @@ $(pv_value)</tooltip>
         <color red="0" green="0" blue="0" />
       </foreground_color>
       <actions hook="false" hook_all="false">
+        <action type="OPEN_DISPLAY">
+          <path>NDFFT.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
+            <R>$(R0)</R>
+            <TITLE>$(T0)</TITLE>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
         <action type="OPEN_DISPLAY">
           <path>NDFFT.opi</path>
           <macros>
@@ -1656,16 +1666,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T15)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDFFT.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <R>$(R16)</R>
-            <TITLE>$(T16)</TITLE>
-          </macros>
-          <replace>0</replace>
-          <description>$(T16)</description>
         </action>
       </actions>
       <font>

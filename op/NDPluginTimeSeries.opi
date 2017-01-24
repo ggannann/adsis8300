@@ -634,6 +634,15 @@ $(pv_value)</tooltip>
           <path>NDTimeSeriesPlot.opi</path>
           <macros>
             <include_parent_macros>true</include_parent_macros>
+            <RN>$(R0)</RN>
+          </macros>
+          <replace>0</replace>
+          <description>$(T0)</description>
+        </action>
+        <action type="OPEN_DISPLAY">
+          <path>NDTimeSeriesPlot.opi</path>
+          <macros>
+            <include_parent_macros>true</include_parent_macros>
             <RN>$(R1)</RN>
           </macros>
           <replace>0</replace>
@@ -710,15 +719,6 @@ $(pv_value)</tooltip>
           </macros>
           <replace>0</replace>
           <description>$(T9)</description>
-        </action>
-        <action type="OPEN_DISPLAY">
-          <path>NDTimeSeriesPlot.opi</path>
-          <macros>
-            <include_parent_macros>true</include_parent_macros>
-            <RN>$(R10)</RN>
-          </macros>
-          <replace>0</replace>
-          <description>$(T10)</description>
         </action>
       </actions>
       <font>
