@@ -218,8 +218,6 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
     uint32_t        ui32_reg_val;
     
     switch (sisdevice->type) {
-        case SIS8300_SIS8300L2:
-            break;
         case SIS8300_SIS8300L:
             break;
         case SIS8300_SIS8300:
@@ -236,7 +234,6 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
      * on 8300 module the bus uses SDIO, on 8300L the bus uses seperate SDI SDO */
     switch (sisdevice->type) {
         case SIS8300_SIS8300L:
-        case SIS8300_SIS8300L2:
             ui32_reg_val = AD9510_GENERATE_SPI_RW_CMD + 0x0030;
             break;
         case SIS8300_SIS8300:
@@ -251,7 +248,6 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
      * set AD9510 to Bidirectional Mode */
     switch (sisdevice->type) {
         case SIS8300_SIS8300L:
-        case SIS8300_SIS8300L2:
             ui32_reg_val = AD9510_GENERATE_SPI_RW_CMD + 0x0010;
             break;
         case SIS8300_SIS8300:
@@ -366,7 +362,6 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
     /* set AD9510 to Bidirectional Mode and Soft Reset */
     switch (sisdevice->type) {
         case SIS8300_SIS8300L:
-        case SIS8300_SIS8300L2:
             ui32_reg_val = AD9510_GENERATE_SPI_RW_CMD + AD9510_SPI_SELECT_NO2 + 0x0030;
             break;
         case SIS8300_SIS8300:
@@ -381,7 +376,6 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
      * set AD9510 to Bidirectional Mode */
     switch (sisdevice->type) {
         case SIS8300_SIS8300L:
-        case SIS8300_SIS8300L2:
             ui32_reg_val = AD9510_GENERATE_SPI_RW_CMD + AD9510_SPI_SELECT_NO2 + 0x0010;
             break;
         case SIS8300_SIS8300:

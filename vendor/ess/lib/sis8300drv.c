@@ -112,7 +112,7 @@ int sis8300drv_open_device(sis8300drv_usr *sisuser) {
 
     sisuser->device = sisdevice;
     
-    /* Detemine type of board and amount of onboard memory. */
+    /* Determine type of board and amount of onboard memory. */
     status = sis8300drv_get_fw_version(sisuser, &fw_version);
     if (status) {
         pthread_mutex_unlock(&sis8300drv_devlist_lock);
@@ -137,19 +137,16 @@ int sis8300drv_open_device(sis8300drv_usr *sisuser) {
                 SIS8300_1GB_MEMORY : SIS8300_512MB_MEMORY;
             break;
         case SIS8300_SIS8300L:
+        case SIS8300_SIS8300L2:
             sisdevice->type = SIS8300_SIS8300L;
             sisdevice->mem_size = SIS8300_2GB_MEMORY;
             break;
-        case SIS8300_SIS8300L2:
-            sisdevice->type = SIS8300_SIS8300L2;
-            sisdevice->mem_size = SIS8300_2GB_MEMORY;
-            break;
         default:
-            /* This should happen only in case the custom fiwmware changed the
-             * model identifier in which case we assume a SIS8300 board with
-             * the least amount possible. */
-            sisdevice->type = SIS8300_SIS8300;
-            sisdevice->mem_size = SIS8300_512MB_MEMORY;
+        	/* Do not assume anything! */
+            pthread_mutex_unlock(&sis8300drv_devlist_lock);
+            sis8300drv_free(sisdevice);
+            sisuser->device = NULL;
+            return status_incompatible;
             break;
     }
     

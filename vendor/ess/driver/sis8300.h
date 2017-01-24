@@ -57,7 +57,6 @@ typedef struct t_sis8300_dev {
     struct device       *drvdevice;     /**< Kernel device struct. */
     struct cdev         *drvcdev;       /**< Kernel character device struct. */
     uint32_t __iomem    *bar0;          /**< Device register access. */
-    unsigned long       mem_size;       /**< Size of device onboard memory in bytes. */
     sis8300_buf         dmabuf;         /**< Buffer for standard read/write dma transfers. */
 
     wait_queue_head_t   dma_irq_wait;   /**< Kernel wait queue for dma interrupts. */

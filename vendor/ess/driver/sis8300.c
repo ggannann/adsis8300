@@ -113,7 +113,6 @@ int sis8300_open(struct inode *inode, struct file *filp) {
             INIT_LIST_HEAD(&sisusr->buflist);
             mutex_init(&sisusr->buflist_lock);
             filp->private_data = sisusr;
-            i_size_write(inode, sisdevice->mem_size);
             sisdevice->count++;
             mutex_unlock(&sis8300_devlist_lock);
             return 0;
@@ -172,7 +171,7 @@ int sis8300_release(struct inode *inode, struct file *filp) {
  */
 static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
     int         status;
-    uint32_t    bar0_size, fw_version, fw_options, device_model, slotcap, slotno;
+    uint32_t    bar0_size, fw_version, fw_options, slotcap, slotno;
     uint16_t    linkstatus, pcieflags;
     struct      pci_dev *slotdev;
     sis8300_dev *sisdevice;
@@ -269,26 +268,6 @@ static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
     
     printk(KERN_INFO "%s: device info: vid/did=%04x/%04x, version=0x%x, options=0x%x\n", 
             sisdevice->name, pdev->vendor, pdev->device, fw_version, fw_options);
-    
-    /* Set size of device memory. */
-    device_model = fw_version >> 16;
-    switch (device_model) {
-        case SIS8300_SIS8300:
-            sisdevice->mem_size = (SIS8300_FPGA_SX_1GByte_Memory & fw_options) ?
-                SIS8300_1GB_MEMORY : SIS8300_512MB_MEMORY;
-            break;
-        case SIS8300_SIS8300L:
-            sisdevice->mem_size = SIS8300_2GB_MEMORY;
-            break;
-        case SIS8300_SIS8300L2:
-            sisdevice->mem_size = SIS8300_2GB_MEMORY;
-            break;
-        default:
-            /* This should happen only in case the custom fiwmware changed the
-             * model identifier in which case we assume the least amount possible. */
-            sisdevice->mem_size = SIS8300_512MB_MEMORY;
-            break;
-    }
 
     /* Create char device. */
     status = alloc_chrdev_region(&(sisdevice->drvnum), 0, 1, sisdevice->name);

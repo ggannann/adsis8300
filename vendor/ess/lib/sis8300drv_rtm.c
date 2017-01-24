@@ -592,7 +592,6 @@ int sis8300drv_i2c_rtm_temperature_get(sis8300drv_usr *sisuser,
         pthread_mutex_unlock(&sisdevice->lock);
         return status;
     }
-    //printf("%s: %X %X %X %X\n", __func__, ui32_data[0], ui32_data[1], ui32_data[2], ui32_data[3]);
 
     conv = (ui32_data[3] & 0xFF);
     conv |= (ui32_data[2] & 0xFF) << 8;
@@ -602,7 +601,7 @@ int sis8300drv_i2c_rtm_temperature_get(sis8300drv_usr *sisuser,
     switch (source) {
 		case rtm_temp_ad8363:
 			conv = conv & ~0x80000000;
-			conv >>= 6;
+			conv >>= 7;
 		    *val = (double)((conv * (3.3 / 0x1000000)) - 1.275) / 0.005;
 			status = status_success;
 			break;
@@ -650,18 +649,8 @@ int sis8300drv_i2c_rw(sis8300drv_dev *sisdevice, uint32_t rw, uint32_t i2c_reg_a
     }
 
     /* 1. CHECK IF THE DEVICE SUPPORTS I2C FUNCTIONALITY */
-//    if (sisdevice->type != SIS8300_SIS8300L) {
-//        return status_argument_invalid;
-//    }
-    switch (sisdevice->type) {
-        case SIS8300_SIS8300L2:
-            break;
-        case SIS8300_SIS8300L:
-            break;
-//        case SIS8300_SIS8300:
-//            break;
-        default:
-            return status_incompatible;
+    if (sisdevice->type != SIS8300_SIS8300L) {
+        return status_argument_invalid;
     }
 
     status = sis8300_reg_read(sisdevice->handle, SIS8300_IDENTIFIER_VERSION_REG, &ui32_reg_val);
