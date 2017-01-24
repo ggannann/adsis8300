@@ -23,7 +23,7 @@
 #define SisAcquireTimeString           "SIS_ACQUIRE_TIME"
 #define SisElapsedTimeString           "SIS_ELAPSED_TIME"
 #define SisTimeStepString              "SIS_TIME_STEP"
-#define SisNumTimePointsString         "SIS_NUM_TIME_POINTS"
+#define SisNumAiSamplesString          "SIS_NUM_AI_SAMPLES"
 #define SisClockSourceString           "SIS_CLOCK_SOURCE"
 #define SisClockFreqString             "SIS_CLOCK_FREQ"
 #define SisClockDivString              "SIS_CLOCK_DIV"
@@ -96,12 +96,35 @@
 	if (__ret) { return __ret; } \
 })
 
+#if _DBG == 1
+	#undef D0
+	#define D0(x) { printf("\n"); }
+	#undef D
+	#define D(x) { \
+    printf("[DBG] %s::%s: ", driverName, __func__); \
+	x; \
+}
+#else
+	#undef D0
+	#define D0(x)
+	#undef D
+	#define D(x)
+#endif
+#define E(x) { \
+    printf("[ERR] %s::%s: ", driverName, __func__); \
+	x; \
+}
+#define I(x) { \
+    printf("[INF] %s::%s: ", driverName, __func__); \
+	x; \
+}
+
 /** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
   * Inherits from asynNDArrayDriver */
 class epicsShareClass ADSIS8300 : public asynNDArrayDriver {
 public:
 	ADSIS8300(const char *portName, const char *devicePath,
-			int maxAddr, int numParams, int numTimePoints, NDDataType_t dataType,
+			int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
 			int maxBuffers, size_t maxMemory, int priority, int stackSize);
 	~ADSIS8300();
 
@@ -118,7 +141,7 @@ protected:
     int P_AcquireTime;
     int P_ElapsedTime;
     int P_TimeStep;
-    int P_NumTimePoints;
+    int P_NumAiSamples;
     int P_ClockSource;
     int P_ClockFreq;
     int P_ClockDiv;

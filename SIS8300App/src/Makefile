@@ -12,6 +12,14 @@ ifeq (vxWorks,$(findstring vxWorks, $(T_A)))
 CODE_CXXFLAGS=
 endif
 
+#$(warning T_A = $(T_A))
+ifeq (debug,$(findstring debug, $(T_A)))
+	USR_CPPFLAGS += -D_DBG=1
+else
+	USR_CPPFLAGS += -D_DBG=0
+endif
+#$(warning USR_CPPFLAGS = $(USR_CPPFLAGS))
+
 LIBRARY_IOC = SIS8300
 
 # EPICS specfic headers and sources

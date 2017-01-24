@@ -36,7 +36,6 @@
 
 #include <ADSIS8300.h>
 
-
 static const char *driverName = "ADSIS8300";
 
 /**
@@ -60,7 +59,7 @@ static void sisTaskC(void *drvPvt)
   * \param[in] devicePath The path to the /dev entry.
   * \param[in] maxAddr The maximum  number of asyn addr addresses this driver supports. 1 is minimum.
   * \param[in] numParams The number of parameters in the derived class.
-  * \param[in] numTimePoints The initial number of time points.
+  * \param[in] numAiSamples The initial number of AI samples.
   * \param[in] dataType The initial data type (NDDataType_t) of the arrays that this driver will create.
   * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is
   *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
@@ -70,7 +69,7 @@ static void sisTaskC(void *drvPvt)
   * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   */
 ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
-		int maxAddr, int numParams, int numTimePoints, NDDataType_t dataType,
+		int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
 		int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName,
@@ -88,8 +87,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 {
     int status = asynSuccess;
 
-    printf("%s::%s: %d addresses, %d parameters\n", driverName, __func__,
-    		maxAddr, NUM_SIS8300_PARAMS+numParams);
+    D(printf("%d addresses, %d parameters\n", maxAddr, NUM_SIS8300_PARAMS+numParams));
 
     mRawDataArray = NULL;
     mNumArrays = 1;
@@ -106,14 +104,12 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
      * task when acquisition starts and stops */
     this->startEventId_ = epicsEventCreate(epicsEventEmpty);
     if (!this->startEventId_) {
-        printf("%s::%s epicsEventCreate failure for start event\n",
-            driverName, __func__);
+        E(printf("epicsEventCreate failure for start event\n"));
         return;
     }
     this->stopEventId_ = epicsEventCreate(epicsEventEmpty);
     if (!this->stopEventId_) {
-        printf("%s::%s epicsEventCreate failure for stop event\n",
-            driverName, __func__);
+        E(printf("epicsEventCreate failure for stop event\n"));
         return;
     }
 
@@ -121,7 +117,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     createParam(SisAcquireTimeString,         asynParamFloat64, &P_AcquireTime);
     createParam(SisElapsedTimeString,         asynParamFloat64, &P_ElapsedTime);
     createParam(SisTimeStepString,            asynParamFloat64, &P_TimeStep);
-    createParam(SisNumTimePointsString,         asynParamInt32, &P_NumTimePoints);
+    createParam(SisNumAiSamplesString,         asynParamInt32, &P_NumAiSamples);
     createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
     createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
     createParam(SisClockDivString,              asynParamInt32, &P_ClockDiv);
@@ -147,7 +143,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     createParam(SisRTMTemp2String,            asynParamFloat64, &P_RTMTemp2);
     createParam(SisRTMTempGetString,            asynParamInt32, &P_RTMTempGet);
 
-    status |= setIntegerParam(P_NumTimePoints, numTimePoints);
+    status |= setIntegerParam(P_NumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
     status |= setDoubleParam(P_TimeStep, 0.001);
     status |= setIntegerParam(P_Acquire, 0);
@@ -161,7 +157,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     ADSIS8300_INF("No error");
 
     if (status) {
-        printf("%s::%s: unable to set parameters\n", driverName, __func__);
+        E(printf("unable to set parameters\n"));
         return;
     }
 
@@ -172,8 +168,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
                                 (EPICSTHREADFUNC)sisTaskC,
                                 this) == NULL);
     if (status) {
-        printf("%s::%s epicsThreadCreate failure for acquisition task\n",
-            driverName, __func__);
+        E(printf("epicsThreadCreate failure for acquisition task\n"));
         return;
     }
 
@@ -181,34 +176,34 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     initDevice();
     this->unlock();
 
-	printf("%s::%s: Init done...\n", driverName, __func__);
+	I(printf("Init done...\n"));
 }
 
 ADSIS8300::~ADSIS8300() {
-	printf("%s::%s: Shutdown and freeing up memory...\n", driverName, __func__);
+	D(printf("Shutdown and freeing up memory...\n"));
 
 	this->lock();
-	printf("%s::%s: Data thread is already down!\n", driverName, __func__);
+	D(printf("Data thread is already down!\n"));
 	destroyDevice();
 	free(mSisDevice);
 	this->unlock();
-	printf("%s::%s: Shutdown complete!\n", driverName, __func__);
+	I(printf("Shutdown complete!\n"));
 }
 
 /** Template function to compute the simulated detector data for any data type */
 int ADSIS8300::acquireRawArrays()
 {
     size_t dims[2];
-    int numTimePoints;
+    int numAiSamples;
     epicsUInt16 *pRaw, *pChRaw;
     int aich, i;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
-    getIntegerParam(P_NumTimePoints, &numTimePoints);
+    getIntegerParam(P_NumAiSamples, &numAiSamples);
 
     /* raw data samples of a given channel are stored in sequence */
-    dims[0] = numTimePoints;
+    dims[0] = numAiSamples;
     dims[1] = ADSIS8300_NUM_CHANNELS;
 
     /* local NDArray is for raw data samples */
@@ -217,13 +212,13 @@ int ADSIS8300::acquireRawArrays()
     }
     mRawDataArray = pNDArrayPool->alloc(2, dims, NDUInt16, 0, 0);
     pRaw = (epicsUInt16 *)mRawDataArray->pData;
-    memset(pRaw, 0, ADSIS8300_NUM_CHANNELS * numTimePoints * sizeof(epicsUInt16));
+    memset(pRaw, 0, ADSIS8300_NUM_CHANNELS * numAiSamples * sizeof(epicsUInt16));
 
     for (aich = 0; aich < ADSIS8300_NUM_CHANNELS; aich++) {
         if (!(mChannelMask & (1 << aich))) {
             continue;
         }
-    	pChRaw = pRaw + (aich * numTimePoints);
+    	pChRaw = pRaw + (aich * numAiSamples);
 
 		SIS8300DRV_CALL_RET("sis8300drv_read_ai", sis8300drv_read_ai(mSisDevice, aich, pChRaw));
 
@@ -231,12 +226,12 @@ int ADSIS8300::acquireRawArrays()
 //		char fname[32];
 //		sprintf(fname, "/tmp/raw_%d.txt", aich);
 //		FILE *fp = fopen(fname, "w");
-		printf("%s::%s: CH %d [%d]: ", driverName, __func__, aich, numTimePoints);
-		for (i = 0; i < numTimePoints; i++) {
+		D(printf("CH %d [%d]: ", aich, numAiSamples));
+		for (i = 0; i < numAiSamples; i++) {
 //			printf("%u ", *(pChRaw + i));
 //		fprintf(fp, "%u\n", *(pChRaw + i));
 		}
-		printf("\n");
+		D0(printf("\n"));
 //		fclose(fp);
     }
 
@@ -247,17 +242,17 @@ int ADSIS8300::acquireRawArrays()
 template <typename epicsType> int ADSIS8300::convertArraysT()
 {
     size_t dims[2];
-    int numTimePoints;
+    int numAiSamples;
     NDDataType_t dataType;
     epicsType *pData, *pVal;
     epicsUInt16 *pRaw, *pChRaw;
     int aich, i;
     double convFactor, convOffset;
     
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
     getIntegerParam(NDDataType, (int *)&dataType);
-    getIntegerParam(P_NumTimePoints, &numTimePoints);
+    getIntegerParam(P_NumAiSamples, &numAiSamples);
 
     /* local NDArray is for raw AI data samples */
     if (! mRawDataArray) {
@@ -267,7 +262,7 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
 
     /* converted AI data samples of all channel are interleaved */
     dims[0] = ADSIS8300_NUM_CHANNELS;
-    dims[1] = numTimePoints;
+    dims[1] = numAiSamples;
 
     /* 0th NDArray is for converted AI data samples */
     if (this->pArrays[0]) {
@@ -275,13 +270,13 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
     }
     this->pArrays[0] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
     pData = (epicsType *)this->pArrays[0]->pData;
-    memset(pData, 0, ADSIS8300_NUM_CHANNELS * numTimePoints * sizeof(epicsType));
+    memset(pData, 0, ADSIS8300_NUM_CHANNELS * numAiSamples * sizeof(epicsType));
 
     for (aich = 0; aich < ADSIS8300_NUM_CHANNELS; aich++) {
     	if (!(mChannelMask & (1 << aich))) {
             continue;
         }
-    	pChRaw = pRaw + (aich * numTimePoints);
+    	pChRaw = pRaw + (aich * numAiSamples);
     	pVal = pData + aich;
 
 		getDoubleParam(aich, P_ConvFactor, &convFactor);
@@ -290,14 +285,14 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
 //		char fname[32];
 //		sprintf(fname, "/tmp/%d.txt", aich);
 //		FILE *fp = fopen(fname, "w");
-		printf("%s::%s: CH %d [%d] CF %f, CO %f: ", driverName, __func__, aich, numTimePoints, convFactor, convOffset);
-		for (i = 0; i < numTimePoints; i++) {
+		D(printf("CH %d [%d] CF %f, CO %f: ", aich, numAiSamples, convFactor, convOffset));
+		for (i = 0; i < numAiSamples; i++) {
 			*pVal = (epicsType)((double)*(pChRaw + i) * convFactor + convOffset);
 //			printf("%f ", (double)*pVal);
 //			fprintf(fp, "%f\n", (double)*pVal);
 			pVal += ADSIS8300_NUM_CHANNELS;
 		}
-		printf("\n");
+		D0(printf("\n"));
 //		fclose(fp);
     }
 
@@ -310,7 +305,7 @@ int ADSIS8300::acquireArrays()
     int dataType;
     int ret;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
     ret = acquireRawArrays();
     if (ret) {
@@ -369,7 +364,7 @@ int ADSIS8300::initDeviceDone()
 {
 	int ret = 0;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
 	return ret;
 }
@@ -378,7 +373,7 @@ int ADSIS8300::armDevice()
 {
 	int ret;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
 	ret = SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
 
@@ -389,7 +384,7 @@ int ADSIS8300::disarmDevice()
 {
 	int ret;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
 	ret = SIS8300DRV_CALL("sis8300drv_disarm_device", sis8300drv_disarm_device(mSisDevice));
 	if (ret) {
@@ -404,7 +399,7 @@ int ADSIS8300::waitForDevice()
 {
 	int ret;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
    	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
 
@@ -415,7 +410,7 @@ int ADSIS8300::deviceDone()
 {
 	int ret = 0;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
 	return ret;
 }
@@ -424,7 +419,7 @@ int ADSIS8300::updateParameters()
 {
 	int ret = 0;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
 	return ret;
 }
@@ -436,7 +431,7 @@ void ADSIS8300::sisTask()
     int status = asynSuccess;
     NDArray *pData;
     epicsTimeStamp frameTime;
-//    int numTimePoints;
+//    int numAiSamples;
     int arrayCounter;
 //    double timeStep;
     int i, a;
@@ -451,13 +446,12 @@ void ADSIS8300::sisTask()
     this->lock();
 
 	if (!sis8300drv_is_device_open(mSisDevice)) {
-		printf("%s::%s: No SIS8300 device - data thread will not start...\n",
-				driverName, __func__);
+		E(printf("No SIS8300 device - data thread will not start...\n"));
 		this->unlock();
 		return;
 	}
 
-	printf("%s::%s: Data thread started...\n", driverName, __func__);
+	I(printf("Data thread started...\n"));
 
 	trgCount = 0;
 
@@ -467,7 +461,7 @@ void ADSIS8300::sisTask()
 taskStart:
 //		callParamCallbacks(0);
 
-		printf("%s::%s: Calling update parameters..\n", driverName, __func__);
+		D(printf("Calling update parameters..\n"));
 		ret = updateParameters();
 		if (ret) {
 			acquiring_ = 0;
@@ -477,18 +471,18 @@ taskStart:
 //			goto taskStart;
 		}
 
-		printf("%s::%s: 0 Acquiring = %d..\n", driverName, __func__, acquiring_);
+		D(printf("0 Acquiring = %d..\n", acquiring_));
 
         /* Has acquisition been stopped? */
         status = epicsEventTryWait(this->stopEventId_);
         if (status == epicsEventWaitOK) {
-			printf("%s::%s: 1 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        	D(printf("1 Acquiring = %d..\n", acquiring_));
         	trgCount = 0;
             acquiring_ = 0;
         }
 
         if (acquiring_) {
-			printf("%s::%s: 2 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        	D(printf("2 Acquiring = %d..\n", acquiring_));
 			getIntegerParam(P_TrigRepeat, &trgRepeat);
 			/* Stop the acquisition if set number of triggers has been reached */
 			if (trgRepeat == 0) {
@@ -502,7 +496,7 @@ taskStart:
        
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
-    		printf("%s::%s: 2a Acquiring = %d..\n", driverName, __func__, acquiring_);
+        	D(printf("2a Acquiring = %d..\n", acquiring_));
 //        	ret = disarmDevice();
 
         	callParamCallbacks(0);
@@ -510,14 +504,14 @@ taskStart:
             asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
                 "%s::%s: waiting for acquire to start\n", driverName, __func__);
 
-            printf("%s::%s: 2b Acquiring = %d..\n", driverName, __func__, acquiring_);
+            D(printf("2b Acquiring = %d..\n", acquiring_));
             this->unlock();
             status = epicsEventWait(this->startEventId_);
             this->lock();
             acquiring_ = 1;
             elapsedTime_ = 0.0;
         	trgCount = 0;
-    		printf("%s::%s: 2c Acquiring = %d..\n", driverName, __func__, acquiring_);
+        	D(printf("2c Acquiring = %d..\n", acquiring_));
 
     		ret = initDeviceDone();
     		if (ret) {
@@ -526,10 +520,10 @@ taskStart:
     			this->unlock();
     			break;
     		}
-    		printf("%s::%s: 2d Acquiring = %d..\n", driverName, __func__, acquiring_);
+    		D(printf("2d Acquiring = %d..\n", acquiring_));
         }
 
-		printf("%s::%s: 3 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        D(printf("3 Acquiring = %d..\n", acquiring_));
 		ret = armDevice();
 		if (ret) {
 			acquiring_ = 0;
@@ -543,7 +537,7 @@ taskStart:
 		/* Unlock while waiting for the device. */
 		this->unlock();
 
-        printf("%s::%s: 4 Acquiring = %d..\n", driverName, __func__, acquiring_);
+		D(printf("4 Acquiring = %d..\n", acquiring_));
        	ret = waitForDevice();
 		if (ret) {
 			/* Lock after the wait failed. */
@@ -558,7 +552,7 @@ taskStart:
 		/* Lock after the device has finished acquisition. */
 		this->lock();
 
-        printf("%s::%s: 5 Acquiring = %d..\n", driverName, __func__, acquiring_);
+		D(printf("5 Acquiring = %d..\n", acquiring_));
        	ret = deviceDone();
 		if (ret) {
 			acquiring_ = 0;
@@ -570,7 +564,7 @@ taskStart:
 
         /* Trigger arrived */
         trgCount++;
-        printf("%s::%s: 6 Acquiring = %d..\n", driverName, __func__, acquiring_);
+        D(printf("6 Acquiring = %d..\n", acquiring_));
 
         /* Get the data */
         ret = acquireArrays();
@@ -581,7 +575,7 @@ taskStart:
 //			break;
 			goto taskStart;
 		}
-        printf("%s::%s: 7 Acquiring = %d..\n", driverName, __func__, acquiring_);
+		D(printf("7 Acquiring = %d..\n", acquiring_));
 
         ADSIS8300_INF("No error");
 
@@ -637,10 +631,10 @@ taskStart:
             callParamCallbacks(i);
         }
 
-//		getIntegerParam(P_NumTimePoints, &numTimePoints);
+//		getIntegerParam(P_numAiSamples, &numAiSamples);
 //        getDoubleParam(P_TimeStep, &timeStep);
 //        getDoubleParam(P_AcquireTime, &acquireTime);
-//        elapsedTime_ += (timeStep * numTimePoints);
+//        elapsedTime_ += (timeStep * numAiSamples);
 //        setDoubleParam(P_ElapsedTime, elapsedTime_);
 //        if ((acquireTime > 0) && (elapsedTime_ > acquireTime)) {
 //            setAcquire(0);
@@ -653,13 +647,13 @@ taskStart:
 //        if ((sis8300drv_trg_src)trgSource == trg_src_soft) {
 //			/* XXX: Sleep for numTimePoint * timeStep seconds */
 //			this->unlock();
-//			epicsThreadSleep(numTimePoints * timeStep);
+//			epicsThreadSleep(numAiSamples * timeStep);
 //			this->lock();
 //        }
     }
 
     callParamCallbacks(0);
-	printf("%s::%s: Data thread is down!\n", driverName, __func__);
+	I(printf("Data thread is down!\n"));
 	sleep(1);
 }
 
@@ -676,7 +670,7 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
-    printf("%s::%s: ENTER %d (%d) = %d\n", driverName, __func__, function, addr, value);
+    D(printf("Enter %d (%d) = %d\n", function, addr, value));
  
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
@@ -717,7 +711,7 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		}
     } else if (function == P_TrigDo) {
     	setAcquire(1);
-    } else if (function == P_NumTimePoints) {
+    } else if (function == P_NumAiSamples) {
    		ret = SIS8300DRV_CALL("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, value));
 		if (ret) {
 			status = asynError;
@@ -789,7 +783,7 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
-    printf("%s::%s: ENTER %d (%d) = %f\n", driverName, __func__, function, addr, value);
+    D(printf("Enter %d (%d) = %f\n", function, addr, value));
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
@@ -862,10 +856,10 @@ void ADSIS8300::report(FILE *fp, int details)
 			firmwareVersion,
 			memorySizeMb);
     if (details > 0) {
-        int numTimePoints, dataType;
-        getIntegerParam(P_NumTimePoints, &numTimePoints);
+        int numAiSamples, dataType;
+        getIntegerParam(P_NumAiSamples, &numAiSamples);
         getIntegerParam(NDDataType, &dataType);
-        fprintf(fp, "  # time points:   %d\n", numTimePoints);
+        fprintf(fp, "  # samples:       %d\n", numAiSamples);
         fprintf(fp, "      Data type:   %d\n", dataType);
     }
     /* Invoke the base class method */
@@ -880,7 +874,7 @@ int ADSIS8300::initDevice()
     unsigned int serialNumber;
     int ret;
 
-    printf("%s::%s: Enter\n", driverName, __func__);
+    D(printf("Enter\n"));
 
 	ret = SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
 	if (ret) {
@@ -916,12 +910,11 @@ int ADSIS8300::initDevice()
 	setIntegerParam(P_DeviceType, deviceType);
 	callParamCallbacks(0);
 
-	printf("%s::%s: Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
-			driverName, __func__,
+	I(printf("Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
 			deviceType,
 			serialNumber,
 			firmwareVersion,
-			(unsigned int)memorySizeMb);
+			(unsigned int)memorySizeMb));
 
 	return 0;
 }
@@ -930,7 +923,7 @@ int ADSIS8300::destroyDevice()
 {
 	int ret;
 
-	printf("%s::%s: Enter\n", driverName, __func__);
+	D(printf("Enter\n"));
 
 	ret = SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
 	return ret;
@@ -939,26 +932,26 @@ int ADSIS8300::destroyDevice()
 int ADSIS8300::enableChannel(unsigned int channel)
 {
    	mChannelMask |= (1 << channel);
-    printf("%s::%s: channel mask %X\n", driverName, __func__, mChannelMask);
+    D(printf("channel mask %X\n", mChannelMask));
 	return 0;
 }
 
 int ADSIS8300::disableChannel(unsigned int channel)
 {
    	mChannelMask &= ~(1 << channel);
-    printf("%s::%s: channel mask %X\n", driverName, __func__, mChannelMask);
+    D(printf("channel mask %X\n", mChannelMask));
 	return 0;
 }
 
 /** Configuration command, called directly or from iocsh */
 extern "C" int SIS8300Config(const char *portName, const char *devicePath,
-		int maxAddr, int numTimePoints, int dataType, int maxBuffers, int maxMemory,
+		int maxAddr, int numAiSamples, int dataType, int maxBuffers, int maxMemory,
 		int priority, int stackSize)
 {
     new ADSIS8300(portName, devicePath,
     		maxAddr,
 			0,
-    		numTimePoints,
+    		numAiSamples,
 			(NDDataType_t)dataType,
 			(maxBuffers < 0) ? 0 : maxBuffers,
 			(maxMemory < 0) ? 0 : maxMemory,
@@ -970,7 +963,7 @@ extern "C" int SIS8300Config(const char *portName, const char *devicePath,
 static const iocshArg SIS8300ConfigArg0 = {"Port name",     iocshArgString};
 static const iocshArg SIS8300ConfigArg1 = {"Device path",   iocshArgString};
 static const iocshArg SIS8300ConfigArg2 = {"# channels",    iocshArgInt};
-static const iocshArg SIS8300ConfigArg3 = {"# time points", iocshArgInt};
+static const iocshArg SIS8300ConfigArg3 = {"# samples",     iocshArgInt};
 static const iocshArg SIS8300ConfigArg4 = {"Data type",     iocshArgInt};
 static const iocshArg SIS8300ConfigArg5 = {"maxBuffers",    iocshArgInt};
 static const iocshArg SIS8300ConfigArg6 = {"maxMemory",     iocshArgInt};
