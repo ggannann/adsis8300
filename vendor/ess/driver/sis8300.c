@@ -212,8 +212,13 @@ static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
         dev_dbg(&sisdevice->pdev->dev, "device not in a PCIe slot\n");
     }
     
-    dev_dbg(&sisdevice->pdev->dev, "vendor/device id %04x/%04x\n", 
-            pdev->vendor, pdev->device);
+    /* XXX: Fix PCI class until Struck does not fix firmware (if ever). */
+    if (pdev->class == 0x00ff0000) {
+        /* SIS8300 card is 'Signal processing controller' */
+        pdev->class = 0x00118000;
+    }
+    dev_dbg(&sisdevice->pdev->dev, "vendor/device id %04x/%04x, class %08X\n",
+            pdev->vendor, pdev->device, pdev->class);
 
     /* Enable device. */
     status = pci_enable_device(pdev);
