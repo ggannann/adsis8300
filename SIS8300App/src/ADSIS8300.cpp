@@ -114,9 +114,6 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     }
 
     createParam(SisAcquireString,               asynParamInt32, &P_Acquire);
-    createParam(SisAcquireTimeString,         asynParamFloat64, &P_AcquireTime);
-    createParam(SisElapsedTimeString,         asynParamFloat64, &P_ElapsedTime);
-    createParam(SisTimeStepString,            asynParamFloat64, &P_TimeStep);
     createParam(SisNumAiSamplesString,         asynParamInt32, &P_NumAiSamples);
     createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
     createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
@@ -145,7 +142,6 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 
     status |= setIntegerParam(P_NumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
-    status |= setDoubleParam(P_TimeStep, 0.001);
     status |= setIntegerParam(P_Acquire, 0);
     status |= setIntegerParam(P_FirmwareVersion, 0);
     status |= setIntegerParam(P_SerialNumber, 0);
@@ -459,18 +455,6 @@ void ADSIS8300::sisTask()
     while (1) {
 
 taskStart:
-//		callParamCallbacks(0);
-
-		D(printf("Calling update parameters..\n"));
-		ret = updateParameters();
-		if (ret) {
-			acquiring_ = 0;
-			setIntegerParam(P_Acquire, 0);
-		//			this->unlock();
-		//			break;
-//			goto taskStart;
-		}
-
 		D(printf("0 Acquiring = %d..\n", acquiring_));
 
         /* Has acquisition been stopped? */
@@ -497,10 +481,9 @@ taskStart:
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
         	D(printf("2a Acquiring = %d..\n", acquiring_));
-//        	ret = disarmDevice();
 
         	callParamCallbacks(0);
-          /* Release the lock while we wait for an event that says acquire has started, then lock again */
+            /* Release the lock while we wait for an event that says acquire has started, then lock again */
             asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
                 "%s::%s: waiting for acquire to start\n", driverName, __func__);
 
@@ -508,19 +491,26 @@ taskStart:
             this->unlock();
             status = epicsEventWait(this->startEventId_);
             this->lock();
+
             acquiring_ = 1;
             elapsedTime_ = 0.0;
         	trgCount = 0;
         	D(printf("2c Acquiring = %d..\n", acquiring_));
 
-    		ret = initDeviceDone();
-    		if (ret) {
-    			acquiring_ = 0;
-    			setIntegerParam(P_Acquire, 0);
-    			this->unlock();
-    			break;
-    		}
-    		D(printf("2d Acquiring = %d..\n", acquiring_));
+			ret = updateParameters();
+			if (ret) {
+				acquiring_ = 0;
+				setIntegerParam(P_Acquire, 0);
+				goto taskStart;
+			}
+			D(printf("2d Acquiring = %d..\n", acquiring_));
+
+			ret = initDeviceDone();
+			if (ret) {
+				acquiring_ = 0;
+				setIntegerParam(P_Acquire, 0);
+				break;
+			}
         }
 
         D(printf("3 Acquiring = %d..\n", acquiring_));
@@ -528,8 +518,6 @@ taskStart:
 		if (ret) {
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-//			this->unlock();
-//			break;
 			goto taskStart;
 		}
 		callParamCallbacks(0);
@@ -544,8 +532,6 @@ taskStart:
 			this->lock();
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-//			this->unlock();
-//			break;
 			goto taskStart;
 		}
 
@@ -557,8 +543,6 @@ taskStart:
 		if (ret) {
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-//			this->unlock();
-//			break;
 			goto taskStart;
 		}
 
@@ -571,8 +555,6 @@ taskStart:
 		if (ret) {
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
-//			this->unlock();
-//			break;
 			goto taskStart;
 		}
 		D(printf("7 Acquiring = %d..\n", acquiring_));
@@ -604,52 +586,11 @@ taskStart:
             doCallbacksGenericPointer(pData, NDArrayData, a);
             this->lock();
         }
-//
-//        pData = this->pArrays[1];
-//
-//        /* Put the frame number and time stamp into the buffer */
-//        pData->uniqueId = uniqueId_++;
-//        getIntegerParam(NDArrayCounter, &arrayCounter);
-//        arrayCounter++;
-//        setIntegerParam(NDArrayCounter, arrayCounter);
-//        epicsTimeGetCurrent(&frameTime);
-//        pData->timeStamp = frameTime.secPastEpoch + frameTime.nsec / 1.e9;
-//        updateTimeStamp(&pData->epicsTS);
-//
-//        /* Get any attributes that have been defined for this driver */
-//        this->getAttributes(pData->pAttributeList);
-//
-//        /* Call the NDArray callback */
-//        /* Must release the lock here, or we can get into a deadlock, because we can
-//         * block on the plugin lock, and the plugin can be calling us */
-//        this->unlock();
-//        doCallbacksGenericPointer(pData, NDArrayData, 0);
-//        this->lock();
 
         /* Call the callbacks to update any changes */
         for (i=0; i<maxAddr; i++) {
             callParamCallbacks(i);
         }
-
-//		getIntegerParam(P_numAiSamples, &numAiSamples);
-//        getDoubleParam(P_TimeStep, &timeStep);
-//        getDoubleParam(P_AcquireTime, &acquireTime);
-//        elapsedTime_ += (timeStep * numAiSamples);
-//        setDoubleParam(P_ElapsedTime, elapsedTime_);
-//        if ((acquireTime > 0) && (elapsedTime_ > acquireTime)) {
-//            setAcquire(0);
-//            setIntegerParam(P_Acquire, 0);
-//            //break;
-//        }
-//        callParamCallbacks(0);
-
-//		getIntegerParam(P_TrigSource, &trgSource);
-//        if ((sis8300drv_trg_src)trgSource == trg_src_soft) {
-//			/* XXX: Sleep for numTimePoint * timeStep seconds */
-//			this->unlock();
-//			epicsThreadSleep(numAiSamples * timeStep);
-//			this->lock();
-//        }
     }
 
     callParamCallbacks(0);
@@ -791,9 +732,17 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 
     if (function == P_ClockFreq) {
 		sis8300drv_clk_div clkdiv = 250000000.0 / value;
+		int clksrc;
+		status = getIntegerParam(P_ClockSource, &clksrc);
+		if ((status == asynSuccess) && ((sis8300drv_clk_src)clksrc != clk_src_internal)) {
+			/* Use no clock divider if NOT running with internal clock! */
+			clkdiv = 1;
+		}
 		ret = SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
 		if (ret) {
 			status = asynError;
+		} else {
+			status = setIntegerParam(P_ClockDiv, clkdiv);
 		}
     } else if (function == P_Attenuation) {
 		int RTMType = 0;

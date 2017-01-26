@@ -1,6 +1,4 @@
-$(P)$(R)NumTimePoints
-$(P)$(R)TimeStep
-$(P)$(R)AcquireTime
+$(P)$(R)NumAiSamples
 $(P)$(R)ClockSource
 $(P)$(R)ClockFreq
 $(P)$(R)ClockDiv

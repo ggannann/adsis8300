@@ -20,9 +20,6 @@
 
 #define SisMessageString               "SIS_MESSAGE"
 #define SisAcquireString               "SIS_ACQUIRE"
-#define SisAcquireTimeString           "SIS_ACQUIRE_TIME"
-#define SisElapsedTimeString           "SIS_ELAPSED_TIME"
-#define SisTimeStepString              "SIS_TIME_STEP"
 #define SisNumAiSamplesString          "SIS_NUM_AI_SAMPLES"
 #define SisClockSourceString           "SIS_CLOCK_SOURCE"
 #define SisClockFreqString             "SIS_CLOCK_FREQ"
@@ -52,18 +49,18 @@
 #define MAX_LOG_STR_LEN                256
 #define ADSIS8300_NUM_CHANNELS         10
 
-
 #define ADSIS8300_LOG(p, s, t, r) ({\
 	if (t == 0) { \
 		snprintf(mSisLogStr, MAX_LOG_STR_LEN, "%s %s::%s: %s", \
 				p, driverName, __func__, s); \
 	} else if (t == 1) { \
-        snprintf(mSisLogStr, MAX_LOG_STR_LEN, "[ERR] %s::%s: %s() failed with '%s' (%d)", \
-                driverName, __func__, s, sis8300drv_strerror(r), r); \
+        snprintf(mSisLogStr, MAX_LOG_STR_LEN, "%s %s::%s: %s() failed with '%s' (%d)", \
+                p, driverName, __func__, s, sis8300drv_strerror(r), r); \
 	} \
 	asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, \
 			  "%s\n", mSisLogStr); \
 	setStringParam(P_Message, mSisLogStr); \
+	printf("%s\n", mSisLogStr); \
 })
 
 #define ADSIS8300_INF(s) ({\
@@ -138,9 +135,6 @@ public:
 protected:
     int P_Acquire;
     #define FIRST_SIS8300_PARAM P_Acquire
-    int P_AcquireTime;
-    int P_ElapsedTime;
-    int P_TimeStep;
     int P_NumAiSamples;
     int P_ClockSource;
     int P_ClockFreq;
