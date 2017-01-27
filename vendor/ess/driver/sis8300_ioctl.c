@@ -26,20 +26,15 @@ int sis8300_wait_irq(sis8300_dev *sisdevice, sis8300_irq *irq) {
     unsigned long       jiffies;
     int                 *wait_flag;
     wait_queue_head_t   *wait_queue;
-    int                 irq_bit;
     
     switch (irq->type) {
         case SIS8300_DAQ_IRQ:
             wait_flag = &sisdevice->daq_irq_flag;
             wait_queue = &sisdevice->daq_irq_wait;
-            /* Enable only DAQ interrupt */
-            irq_bit = 1 << DAQ_IRQ;
             break;
         case SIS8300_USR_IRQ:
             wait_flag = &sisdevice->usr_irq_flag;
             wait_queue = &sisdevice->usr_irq_wait;
-            /* Enable only USER interrupt */
-            irq_bit = 1 << USER_IRQ;
             break;
         default:
             printk(KERN_ERR "%s: irq type unknown: 0x%x\n", sisdevice->name, irq->type);
@@ -55,11 +50,6 @@ int sis8300_wait_irq(sis8300_dev *sisdevice, sis8300_irq *irq) {
         return -ENODEV;
     }
 
-    /* XXX: Reverting to old behavior because we could get DMA interrupt while servicing
-     * DAQ interrupt and DMA interrupt would thus not be cleared and handled resulting
-     * in read() not being woken. */
-    sis8300_register_write(sisdevice, IRQ_ENABLE, irq_bit);
-
     if(irq->timeout) {
         /* Wait for interrupt, timeout is specified in milliseconds. */
         jiffies = irq->timeout * HZ / 1000;
@@ -70,12 +60,6 @@ int sis8300_wait_irq(sis8300_dev *sisdevice, sis8300_irq *irq) {
             status = 1; /* Fake non-timeout return. */
         }
     }
-
-    /* XXX: Reverting to old behavior because we could get DMA interrupt while servicing
-     * DAQ interrupt and DMA interrupt would thus not be cleared and handled resulting
-     * in read() not being woken. */
-    /* Disable the interrupt */
-    sis8300_register_write(sisdevice, IRQ_ENABLE, irq_bit<<16);
 
     switch (status) {
         case 0:             /* Timeout elapsed. */

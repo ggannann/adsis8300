@@ -351,10 +351,7 @@ static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
     /* Enable all interrupts. The stock driver always disabled all interrupts
      * and then just enabled the appropriate one during dma read/write.
      * Revert to old behaviour if unexplainable things start happening. */
-     /* XXX: Reverting to old behaviour because we could get DMA interrupt while servicing
-      * DAQ interrupt and DMA interrupt would thus not be cleared and handled resulting
-      * in read() not being woken. */
-    /* sis8300_register_write(sisdevice, IRQ_ENABLE, IRQ_MASTER_ENABLE); */
+    sis8300_register_write(sisdevice, IRQ_ENABLE, IRQ_MASTER_ENABLE);
 
     /* Add device context to the list of available devices. */
     sisdevice->available = 1;
