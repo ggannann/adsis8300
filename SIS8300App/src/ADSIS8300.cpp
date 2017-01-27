@@ -114,7 +114,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     }
 
     createParam(SisAcquireString,               asynParamInt32, &P_Acquire);
-    createParam(SisNumAiSamplesString,         asynParamInt32, &P_NumAiSamples);
+    createParam(SisNumAiSamplesString,         asynParamInt32,  &P_NumAiSamples);
     createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
     createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
     createParam(SisClockDivString,              asynParamInt32, &P_ClockDiv);
@@ -469,7 +469,9 @@ taskStart:
         	D(printf("2 Acquiring = %d..\n", acquiring_));
 			getIntegerParam(P_TrigRepeat, &trgRepeat);
 			/* Stop the acquisition if set number of triggers has been reached */
-			if (trgRepeat == 0) {
+			if (trgRepeat < 0) {
+				/* Continue acquiring forever .. */
+			} else if (trgRepeat == 0) {
 				acquiring_ = 0;
 				setIntegerParam(P_Acquire, 0);
 			} else if ((trgRepeat > 0) && (trgCount >= trgRepeat)) {
@@ -513,6 +515,13 @@ taskStart:
 			}
         }
 
+        if (mChannelMask == 0) {
+        	ADSIS8300_ERR("No channels enabled!");
+			acquiring_ = 0;
+			setIntegerParam(P_Acquire, 0);
+			goto taskStart;
+        }
+
         D(printf("3 Acquiring = %d..\n", acquiring_));
 		ret = armDevice();
 		if (ret) {
@@ -545,6 +554,7 @@ taskStart:
 			setIntegerParam(P_Acquire, 0);
 			goto taskStart;
 		}
+		callParamCallbacks(0);
 
         /* Trigger arrived */
         trgCount++;
