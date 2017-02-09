@@ -74,10 +74,10 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 
     : asynNDArrayDriver(portName,
     		maxAddr,
-    		NUM_SIS8300_PARAMS+numParams,
+			SIS8300_NUM_PARAMS+numParams,
 			maxBuffers, maxMemory,
-    		asynFloat32ArrayMask,
-			asynFloat32ArrayMask,
+    		asynFloat32ArrayMask | asynUInt32DigitalMask,
+			asynFloat32ArrayMask | asynUInt32DigitalMask,
 			ASYN_CANBLOCK | ASYN_MULTIDEVICE, /* asyn flags*/
 			1,                                /* autoConnect=1 */
 			priority,
@@ -87,7 +87,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 {
     int status = asynSuccess;
 
-    D(printf("%d addresses, %d parameters\n", maxAddr, NUM_SIS8300_PARAMS+numParams));
+    D(printf("%d addresses, %d parameters\n", maxAddr, SIS8300_NUM_PARAMS+numParams));
 
     mRawDataArray = NULL;
     mNumArrays = 1;
@@ -234,7 +234,6 @@ int ADSIS8300::acquireRawArrays()
     return 0;
 }
 
-/** Template function to compute the simulated detector data for any data type */
 template <typename epicsType> int ADSIS8300::convertArraysT()
 {
     size_t dims[2];
@@ -295,7 +294,6 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
     return 0;
 }
 
-/** Computes the new image data */
 int ADSIS8300::acquireArrays()
 {
     int dataType;
@@ -702,7 +700,7 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		}
     } else {
         /* If this parameter belongs to a base class call its method */
-        if (function < FIRST_SIS8300_PARAM) {
+        if (function < SIS8300_FIRST_PARAM) {
         	status = asynNDArrayDriver::writeInt32(pasynUser, value);
         }
     }
@@ -767,7 +765,7 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 		}
     } else {
         /* If this parameter belongs to a base class call its method */
-        if (function < FIRST_SIS8300_PARAM) {
+        if (function < SIS8300_FIRST_PARAM) {
         	status = asynNDArrayDriver::writeFloat64(pasynUser, value);
         }
     }

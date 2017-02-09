@@ -123,7 +123,7 @@ public:
 	ADSIS8300(const char *portName, const char *devicePath,
 			int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
 			int maxBuffers, size_t maxMemory, int priority, int stackSize);
-	~ADSIS8300();
+	virtual ~ADSIS8300();
 
     /* These are the methods that we override from asynNDArrayDriver */
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
@@ -134,7 +134,7 @@ public:
 
 protected:
     int P_Acquire;
-    #define FIRST_SIS8300_PARAM P_Acquire
+    #define SIS8300_FIRST_PARAM P_Acquire
     int P_NumAiSamples;
     int P_ClockSource;
     int P_ClockFreq;
@@ -162,7 +162,7 @@ protected:
     int P_RTMTemp2;
 
     int P_Dummy;
-    #define LAST_SIS8300_PARAM P_Dummy
+    #define SIS8300_LAST_PARAM P_Dummy
 
     /* These are the methods that are new to this class */
     int acquireRawArrays();
@@ -199,6 +199,4 @@ private:
     unsigned int mSisFirmwareOptions;
 };
 
-
-#define NUM_SIS8300_PARAMS ((int)(&LAST_SIS8300_PARAM - &FIRST_SIS8300_PARAM + 1))
-
+#define SIS8300_NUM_PARAMS ((int)(&SIS8300_LAST_PARAM - &SIS8300_FIRST_PARAM + 1))

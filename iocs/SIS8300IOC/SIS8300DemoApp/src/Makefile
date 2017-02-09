@@ -17,7 +17,14 @@ PROD_IOC = $(PROD_NAME)
 DBD += $(PROD_NAME).dbd
 $(PROD_NAME)_DBD += SIS8300Support.dbd
 
+# <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
+PROD_SRCS_DEFAULT += $(PROD_NAME)_registerRecordDeviceDriver.cpp $(PROD_NAME)Main.cpp
+PROD_SRCS_vxWorks += $(PROD_NAME)_registerRecordDeviceDriver.cpp
+
+PROD_LIBS += SIS8300
+
 # devlib2 and mrfioc2
+PROD_LIBS += evgMrm evrMrm mrmShared mrfCommon epicspci epicsvme
 $(PROD_NAME)_DBD += base.dbd
 $(PROD_NAME)_DBD += system.dbd
 $(PROD_NAME)_DBD += evrSupport.dbd
@@ -26,19 +33,10 @@ $(PROD_NAME)_DBD += mrmShared.dbd
 $(PROD_NAME)_DBD += mrfCommon.dbd
 $(PROD_NAME)_DBD += epicspci.dbd
 
-# <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
-PROD_SRCS_DEFAULT += $(PROD_NAME)_registerRecordDeviceDriver.cpp $(PROD_NAME)Main.cpp
-PROD_SRCS_vxWorks += $(PROD_NAME)_registerRecordDeviceDriver.cpp
-
-PROD_LIBS += SIS8300
-# devlib2 and mrfioc2
-PROD_LIBS += evgMrm evrMrm mrmShared mrfCommon epicspci epicsvme
-
 PROD_SYS_LIBS += rt m udev
+PROD_LIBS += sis8300drv
 
 include $(ADCORE)/ADApp/commonDriverMakefile
-
-PROD_LIBS += sis8300drv
 
 #=============================
 
