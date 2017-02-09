@@ -113,43 +113,43 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
         return;
     }
 
-    createParam(SisAcquireString,               asynParamInt32, &P_Acquire);
-    createParam(SisNumAiSamplesString,         asynParamInt32,  &P_NumAiSamples);
-    createParam(SisClockSourceString,           asynParamInt32, &P_ClockSource);
-    createParam(SisClockFreqString,           asynParamFloat64, &P_ClockFreq);
-    createParam(SisClockDivString,              asynParamInt32, &P_ClockDiv);
-    createParam(SisTrigSourceString,            asynParamInt32, &P_TrigSource);
-    createParam(SisTrigLineString,              asynParamInt32, &P_TrigLine);
-    createParam(SisTrigDoString,                asynParamInt32, &P_TrigDo);
-    createParam(SisTrigDelayString,             asynParamInt32, &P_TrigDelay);
-    createParam(SisTrigRepeatString,            asynParamInt32, &P_TrigRepeat);
-    createParam(SisChannelEnableString,         asynParamInt32, &P_Enable);
-    createParam(SisChannelConvFactorString,   asynParamFloat64, &P_ConvFactor);
-    createParam(SisChannelConvOffsetString,   asynParamFloat64, &P_ConvOffset);
-    createParam(SisChannelAttenuationString,  asynParamFloat64, &P_Attenuation);
-    createParam(SisChannelDecimFactorString,    asynParamInt32, &P_DecimFactor);
-    createParam(SisChannelDecimOffsetString,    asynParamInt32, &P_DecimOffset);
-    createParam(SisResetString,                 asynParamInt32, &P_Reset);
-    createParam(SisMessageString,               asynParamOctet, &P_Message);
-    createParam(SisFirmwareVersionString,       asynParamInt32, &P_FirmwareVersion);
-    createParam(SisSerialNumberString,          asynParamInt32, &P_SerialNumber);
-    createParam(SisMemorySizeString,            asynParamInt32, &P_MemorySize);
-    createParam(SisDeviceTypeString,            asynParamInt32, &P_DeviceType);
-    createParam(SisRTMTypeString,               asynParamInt32, &P_RTMType);
-    createParam(SisRTMTemp1String,            asynParamFloat64, &P_RTMTemp1);
-    createParam(SisRTMTemp2String,            asynParamFloat64, &P_RTMTemp2);
-    createParam(SisRTMTempGetString,            asynParamInt32, &P_RTMTempGet);
+    createParam(SisAcquireString,               asynParamInt32, &mSISAcquire);
+    createParam(SisNumAiSamplesString,         asynParamInt32,  &mSISNumAiSamples);
+    createParam(SisClockSourceString,           asynParamInt32, &mSISClockSource);
+    createParam(SisClockFreqString,           asynParamFloat64, &mSISClockFreq);
+    createParam(SisClockDivString,              asynParamInt32, &mSISClockDiv);
+    createParam(SisTrigSourceString,            asynParamInt32, &mSISTrigSource);
+    createParam(SisTrigLineString,              asynParamInt32, &mSISTrigLine);
+    createParam(SisTrigDoString,                asynParamInt32, &mSISTrigDo);
+    createParam(SisTrigDelayString,             asynParamInt32, &mSISTrigDelay);
+    createParam(SisTrigRepeatString,            asynParamInt32, &mSISTrigRepeat);
+    createParam(SisChannelEnableString,         asynParamInt32, &mSISEnable);
+    createParam(SisChannelConvFactorString,   asynParamFloat64, &mSISConvFactor);
+    createParam(SisChannelConvOffsetString,   asynParamFloat64, &mSISConvOffset);
+    createParam(SisChannelAttenuationString,  asynParamFloat64, &mSISAttenuation);
+    createParam(SisChannelDecimFactorString,    asynParamInt32, &mSISDecimFactor);
+    createParam(SisChannelDecimOffsetString,    asynParamInt32, &mSISDecimOffset);
+    createParam(SisResetString,                 asynParamInt32, &mSISReset);
+    createParam(SisMessageString,               asynParamOctet, &mSISMessage);
+    createParam(SisFirmwareVersionString,       asynParamInt32, &mSISFirmwareVersion);
+    createParam(SisSerialNumberString,          asynParamInt32, &mSISSerialNumber);
+    createParam(SisMemorySizeString,            asynParamInt32, &mSISMemorySize);
+    createParam(SisDeviceTypeString,            asynParamInt32, &mSISDeviceType);
+    createParam(SisRTMTypeString,               asynParamInt32, &mSISRTMType);
+    createParam(SisRTMTemp1String,            asynParamFloat64, &mSISRTMTemp1);
+    createParam(SisRTMTemp2String,            asynParamFloat64, &mSISRTMTemp2);
+    createParam(SisRTMTempGetString,            asynParamInt32, &mSISRTMTempGet);
 
-    status |= setIntegerParam(P_NumAiSamples, numAiSamples);
+    status |= setIntegerParam(mSISNumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
-    status |= setIntegerParam(P_Acquire, 0);
-    status |= setIntegerParam(P_FirmwareVersion, 0);
-    status |= setIntegerParam(P_SerialNumber, 0);
-    status |= setIntegerParam(P_MemorySize, 0);
-    status |= setIntegerParam(P_DeviceType, 0);
-    status |= setIntegerParam(P_RTMType, 0);
-    status |= setDoubleParam(P_RTMTemp1, 0);
-    status |= setDoubleParam(P_RTMTemp2, 0);
+    status |= setIntegerParam(mSISAcquire, 0);
+    status |= setIntegerParam(mSISFirmwareVersion, 0);
+    status |= setIntegerParam(mSISSerialNumber, 0);
+    status |= setIntegerParam(mSISMemorySize, 0);
+    status |= setIntegerParam(mSISDeviceType, 0);
+    status |= setIntegerParam(mSISRTMType, 0);
+    status |= setDoubleParam(mSISRTMTemp1, 0);
+    status |= setDoubleParam(mSISRTMTemp2, 0);
     SIS8300_INF("No error");
 
     if (status) {
@@ -196,7 +196,7 @@ int SIS8300::acquireRawArrays()
 
 	D(printf("Enter\n"));
 
-    getIntegerParam(P_NumAiSamples, &numAiSamples);
+    getIntegerParam(mSISNumAiSamples, &numAiSamples);
 
     /* raw data samples of a given channel are stored in sequence */
     dims[0] = numAiSamples;
@@ -247,7 +247,7 @@ template <typename epicsType> int SIS8300::convertArraysT()
 	D(printf("Enter\n"));
 
     getIntegerParam(NDDataType, (int *)&dataType);
-    getIntegerParam(P_NumAiSamples, &numAiSamples);
+    getIntegerParam(mSISNumAiSamples, &numAiSamples);
 
     /* local NDArray is for raw AI data samples */
     if (! mRawDataArray) {
@@ -274,8 +274,8 @@ template <typename epicsType> int SIS8300::convertArraysT()
     	pChRaw = pRaw + (aich * numAiSamples);
     	pVal = pData + aich;
 
-		getDoubleParam(aich, P_ConvFactor, &convFactor);
-		getDoubleParam(aich, P_ConvOffset, &convOffset);
+		getDoubleParam(aich, mSISConvFactor, &convFactor);
+		getDoubleParam(aich, mSISConvOffset, &convOffset);
 
 //		char fname[32];
 //		sprintf(fname, "/tmp/%d.txt", aich);
@@ -465,16 +465,16 @@ taskStart:
 
         if (acquiring_) {
         	D(printf("2 Acquiring = %d..\n", acquiring_));
-			getIntegerParam(P_TrigRepeat, &trgRepeat);
+			getIntegerParam(mSISTrigRepeat, &trgRepeat);
 			/* Stop the acquisition if set number of triggers has been reached */
 			if (trgRepeat < 0) {
 				/* Continue acquiring forever .. */
 			} else if (trgRepeat == 0) {
 				acquiring_ = 0;
-				setIntegerParam(P_Acquire, 0);
+				setIntegerParam(mSISAcquire, 0);
 			} else if ((trgRepeat > 0) && (trgCount >= trgRepeat)) {
 				acquiring_ = 0;
-				setIntegerParam(P_Acquire, 0);
+				setIntegerParam(mSISAcquire, 0);
 			}
         }
        
@@ -500,7 +500,7 @@ taskStart:
 			ret = updateParameters();
 			if (ret) {
 				acquiring_ = 0;
-				setIntegerParam(P_Acquire, 0);
+				setIntegerParam(mSISAcquire, 0);
 				goto taskStart;
 			}
 			D(printf("2d Acquiring = %d..\n", acquiring_));
@@ -508,7 +508,7 @@ taskStart:
 			ret = initDeviceDone();
 			if (ret) {
 				acquiring_ = 0;
-				setIntegerParam(P_Acquire, 0);
+				setIntegerParam(mSISAcquire, 0);
 				break;
 			}
         }
@@ -516,7 +516,7 @@ taskStart:
         if (mChannelMask == 0) {
         	SIS8300_ERR("No channels enabled!");
 			acquiring_ = 0;
-			setIntegerParam(P_Acquire, 0);
+			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
         }
 
@@ -524,7 +524,7 @@ taskStart:
 		ret = armDevice();
 		if (ret) {
 			acquiring_ = 0;
-			setIntegerParam(P_Acquire, 0);
+			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
 		callParamCallbacks(0);
@@ -538,7 +538,7 @@ taskStart:
 			/* Lock after the wait failed. */
 			this->lock();
 			acquiring_ = 0;
-			setIntegerParam(P_Acquire, 0);
+			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
 
@@ -549,7 +549,7 @@ taskStart:
        	ret = deviceDone();
 		if (ret) {
 			acquiring_ = 0;
-			setIntegerParam(P_Acquire, 0);
+			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
 		callParamCallbacks(0);
@@ -562,7 +562,7 @@ taskStart:
         ret = acquireArrays();
 		if (ret) {
 			acquiring_ = 0;
-			setIntegerParam(P_Acquire, 0);
+			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
 		D(printf("7 Acquiring = %d..\n", acquiring_));
@@ -625,24 +625,24 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
      * status at the end, but that's OK */
     status = setIntegerParam(addr, function, value);
 
-    if (function == P_Acquire) {
+    if (function == mSISAcquire) {
         setAcquire(value);
-    } else if (function == P_ClockSource) {
+    } else if (function == mSISClockSource) {
    		ret = SIS8300DRV_CALL("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)value));
    		if (ret) {
    			status = asynError;
     	}
-    } else if (function == P_ClockDiv) {
+    } else if (function == mSISClockDiv) {
 		ret = SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)value));
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_TrigSource) {
+    } else if (function == mSISTrigSource) {
    		ret = SIS8300DRV_CALL("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)value));
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_TrigLine) {
+    } else if (function == mSISTrigLine) {
 		sis8300drv_trg_ext trgext = trg_ext_harlink;
 		unsigned int trgmask = (1 << value);
 		if (value >= SIS8300DRV_NUM_FP_TRG) {
@@ -653,19 +653,19 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_TrigDelay) {
+    } else if (function == mSISTrigDelay) {
    		ret = SIS8300DRV_CALL("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, value));
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_TrigDo) {
+    } else if (function == mSISTrigDo) {
     	setAcquire(1);
-    } else if (function == P_NumAiSamples) {
+    } else if (function == mSISNumAiSamples) {
    		ret = SIS8300DRV_CALL("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, value));
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_Enable) {
+    } else if (function == mSISEnable) {
     	if (value) {
     		enableChannel(addr);
     	} else {
@@ -675,14 +675,14 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_Reset) {
+    } else if (function == mSISReset) {
    		ret = SIS8300DRV_CALL("sis8300drv_master_reset", sis8300drv_master_reset(mSisDevice));
 		if (ret) {
 			status = asynError;
 		}
-    } else if (function == P_RTMTempGet) {
+    } else if (function == mSISRTMTempGet) {
 		int RTMType = 0;
-		getIntegerParam(P_RTMType, &RTMType);
+		getIntegerParam(mSISRTMType, &RTMType);
 		/* Only DWC8VM1 has attenuators */
 		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
 			double temp;
@@ -691,12 +691,12 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 				status = asynError;
 			}
 			usleep(200000);
-			setDoubleParam(P_RTMTemp1, temp);
+			setDoubleParam(mSISRTMTemp1, temp);
 			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_temperature_get", sis8300drv_i2c_rtm_temperature_get(mSisDevice, (sis8300drv_rtm)RTMType, rtm_temp_ltc2493, &temp));
 			if (ret) {
 				status = asynError;
 			}
-			setDoubleParam(P_RTMTemp2, temp);
+			setDoubleParam(mSISRTMTemp2, temp);
 		}
     } else {
         /* If this parameter belongs to a base class call its method */
@@ -738,10 +738,10 @@ asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
      * status at the end, but that's OK */
     status = setDoubleParam(addr, function, value);
 
-    if (function == P_ClockFreq) {
+    if (function == mSISClockFreq) {
 		sis8300drv_clk_div clkdiv = 250000000.0 / value;
 		int clksrc;
-		status = getIntegerParam(P_ClockSource, &clksrc);
+		status = getIntegerParam(mSISClockSource, &clksrc);
 		if ((status == asynSuccess) && ((sis8300drv_clk_src)clksrc != clk_src_internal)) {
 			/* Use no clock divider if NOT running with internal clock! */
 			clkdiv = 1;
@@ -750,11 +750,11 @@ asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 		if (ret) {
 			status = asynError;
 		} else {
-			status = setIntegerParam(P_ClockDiv, clkdiv);
+			status = setIntegerParam(mSISClockDiv, clkdiv);
 		}
-    } else if (function == P_Attenuation) {
+    } else if (function == mSISAttenuation) {
 		int RTMType = 0;
-		getIntegerParam(P_RTMType, &RTMType);
+		getIntegerParam(mSISRTMType, &RTMType);
 		/* Only DWC8VM1 has attenuators */
 		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
 			int val = (int)((value + 31.5) * 2);
@@ -799,10 +799,10 @@ void SIS8300::report(FILE *fp, int details)
 
     fprintf(fp, "Struck           : %s\n", this->portName);
     fprintf(fp, "Device path      : %s\n", mSisDevicePath);
-	getIntegerParam(P_FirmwareVersion, &firmwareVersion);
-	getIntegerParam(P_SerialNumber, &serialNumber);
-	getIntegerParam(P_MemorySize, &memorySizeMb);
-	getIntegerParam(P_DeviceType, &deviceType);
+	getIntegerParam(mSISFirmwareVersion, &firmwareVersion);
+	getIntegerParam(mSISSerialNumber, &serialNumber);
+	getIntegerParam(mSISMemorySize, &memorySizeMb);
+	getIntegerParam(mSISDeviceType, &deviceType);
 	fprintf(fp,
 			"Device type      : %X\n"
 			"Serial number    : %d\n"
@@ -814,7 +814,7 @@ void SIS8300::report(FILE *fp, int details)
 			memorySizeMb);
     if (details > 0) {
         int numAiSamples, dataType;
-        getIntegerParam(P_NumAiSamples, &numAiSamples);
+        getIntegerParam(mSISNumAiSamples, &numAiSamples);
         getIntegerParam(NDDataType, &dataType);
         fprintf(fp, "  # samples:       %d\n", numAiSamples);
         fprintf(fp, "      Data type:   %d\n", dataType);
@@ -861,10 +861,10 @@ int SIS8300::initDevice()
 		return ret;
 	}
 
-	setIntegerParam(P_FirmwareVersion, firmwareVersion);
-	setIntegerParam(P_SerialNumber, serialNumber);
-	setIntegerParam(P_MemorySize, memorySizeMb);
-	setIntegerParam(P_DeviceType, deviceType);
+	setIntegerParam(mSISFirmwareVersion, firmwareVersion);
+	setIntegerParam(mSISSerialNumber, serialNumber);
+	setIntegerParam(mSISMemorySize, memorySizeMb);
+	setIntegerParam(mSISDeviceType, deviceType);
 	callParamCallbacks(0);
 
 	I(printf("Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",

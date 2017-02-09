@@ -59,7 +59,7 @@
 	} \
 	asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, \
 			  "%s\n", mSisLogStr); \
-	setStringParam(P_Message, mSisLogStr); \
+	setStringParam(mSISMessage, mSisLogStr); \
 	printf("%s\n", mSisLogStr); \
 })
 
@@ -132,36 +132,36 @@ public:
     void sisTask();
 
 protected:
-    int P_Acquire;
-    #define SIS8300_FIRST_PARAM P_Acquire
-    int P_NumAiSamples;
-    int P_ClockSource;
-    int P_ClockFreq;
-    int P_ClockDiv;
-    int P_TrigSource;
-    int P_TrigLine;
-    int P_TrigDo;
-    int P_TrigDelay;
-    int P_TrigRepeat;
-    int P_Enable;
-    int P_ConvFactor;
-    int P_ConvOffset;
-    int P_Attenuation;
-    int P_DecimFactor;
-    int P_DecimOffset;
-    int P_Reset;
-    int P_Message;
-    int P_FirmwareVersion;
-    int P_SerialNumber;
-    int P_DeviceType;
-    int P_MemorySize;
-    int P_RTMType;
-    int P_RTMTempGet;
-    int P_RTMTemp1;
-    int P_RTMTemp2;
+    int mSISAcquire;
+    #define SIS8300_FIRST_PARAM mSISAcquire
+    int mSISNumAiSamples;
+    int mSISClockSource;
+    int mSISClockFreq;
+    int mSISClockDiv;
+    int mSISTrigSource;
+    int mSISTrigLine;
+    int mSISTrigDo;
+    int mSISTrigDelay;
+    int mSISTrigRepeat;
+    int mSISEnable;
+    int mSISConvFactor;
+    int mSISConvOffset;
+    int mSISAttenuation;
+    int mSISDecimFactor;
+    int mSISDecimOffset;
+    int mSISReset;
+    int mSISMessage;
+    int mSISFirmwareVersion;
+    int mSISSerialNumber;
+    int mSISDeviceType;
+    int mSISMemorySize;
+    int mSISRTMType;
+    int mSISRTMTempGet;
+    int mSISRTMTemp1;
+    int mSISRTMTemp2;
 
-    int P_Dummy;
-    #define SIS8300_LAST_PARAM P_Dummy
+    int mSISDummy;
+    #define SIS8300_LAST_PARAM mSISDummy
 
     /* These are the methods that are new to this class */
     int acquireRawArrays();
