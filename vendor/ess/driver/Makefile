@@ -13,8 +13,9 @@ kernel_dir := /lib/modules/$(kernel_this)/build
 target_dir := /lib/modules/$(kernel_this)/extra
 
 default: modules
+install: modules
 
-clean:
+clean distclean realclean:
 	rm -rf *.o *~ core .depend .*.cmd *.ko *.ko.unsigned *.mod.c .tmp_versions *.symvers *.order *.markers
 
 modules modules_install:
