@@ -34,7 +34,7 @@
 #include <asynNDArrayDriver.h>
 #include <epicsExport.h>
 
-#include <ADSIS8300.h>
+#include <SIS8300.h>
 
 static const char *driverName = "ADSIS8300";
 

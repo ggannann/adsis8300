@@ -23,8 +23,8 @@ endif
 LIBRARY_IOC = SIS8300
 
 # EPICS specfic headers and sources
-INC += ADSIS8300.h
-LIB_SRCS += ADSIS8300.cpp
+INC += SIS8300.h
+LIB_SRCS += SIS8300.cpp
 
 DBD += SIS8300Support.dbd
 
