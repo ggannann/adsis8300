@@ -46,19 +46,19 @@ epicsEnvSet("EPICS_CA_MAX_ARRAY_BYTES", "10000000")
 #            int maxAddr, int numParams, int numTimePoints, NDDataType_t dataType,
 #            int maxBuffers, size_t maxMemory, int priority, int stackSize)
 SIS8300Config("$(PORT)", "/dev/sis8300-12", $(NUM_CH), $(NUM_SAMPLES), 7, 0, 0)
-dbLoadRecords("$(ADSIS8300)/db/SIS8300.template",  "P=$(PREFIX),R=,          PORT=$(PORT),ADDR=0,TIMEOUT=1")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH0):, PORT=$(PORT),ADDR=0,TIMEOUT=1,NAME=$(AICH0)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH1):, PORT=$(PORT),ADDR=1,TIMEOUT=1,NAME=$(AICH1)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH2):, PORT=$(PORT),ADDR=2,TIMEOUT=1,NAME=$(AICH2)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH3):, PORT=$(PORT),ADDR=3,TIMEOUT=1,NAME=$(AICH3)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH4):, PORT=$(PORT),ADDR=4,TIMEOUT=1,NAME=$(AICH4)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH5):, PORT=$(PORT),ADDR=5,TIMEOUT=1,NAME=$(AICH5)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH6):, PORT=$(PORT),ADDR=6,TIMEOUT=1,NAME=$(AICH6)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH7):, PORT=$(PORT),ADDR=7,TIMEOUT=1,NAME=$(AICH7)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH8):, PORT=$(PORT),ADDR=8,TIMEOUT=1,NAME=$(AICH8)")
-dbLoadRecords("$(ADSIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH9):, PORT=$(PORT),ADDR=9,TIMEOUT=1,NAME=$(AICH9)")
+dbLoadRecords("$(SIS8300)/db/SIS8300.template",  "P=$(PREFIX),R=,          PORT=$(PORT),ADDR=0,TIMEOUT=1")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH0):, PORT=$(PORT),ADDR=0,TIMEOUT=1,NAME=$(AICH0)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH1):, PORT=$(PORT),ADDR=1,TIMEOUT=1,NAME=$(AICH1)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH2):, PORT=$(PORT),ADDR=2,TIMEOUT=1,NAME=$(AICH2)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH3):, PORT=$(PORT),ADDR=3,TIMEOUT=1,NAME=$(AICH3)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH4):, PORT=$(PORT),ADDR=4,TIMEOUT=1,NAME=$(AICH4)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH5):, PORT=$(PORT),ADDR=5,TIMEOUT=1,NAME=$(AICH5)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH6):, PORT=$(PORT),ADDR=6,TIMEOUT=1,NAME=$(AICH6)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH7):, PORT=$(PORT),ADDR=7,TIMEOUT=1,NAME=$(AICH7)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH8):, PORT=$(PORT),ADDR=8,TIMEOUT=1,NAME=$(AICH8)")
+dbLoadRecords("$(SIS8300)/db/SIS8300N.template", "P=$(PREFIX),R=$(AICH9):, PORT=$(PORT),ADDR=9,TIMEOUT=1,NAME=$(AICH9)")
 
-# Create a standard arrays plugin, set it to get data from ADSIS8300 driver.
+# Create a standard arrays plugin, set it to get data from SIS8300 driver.
 NDStdArraysConfigure("Image1", 3, 0, "$(PORT)", 0)
 # This creates a waveform large enough for 100x10 arrays.
 dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),TYPE=Float64,FTVL=DOUBLE,NELEMENTS=1000")
@@ -118,7 +118,7 @@ dbLoadRecords("$(MRFIOC2)/db/evr-pulserMap.template", "DEVICE=$(DEVICE), SYS=$(S
 ## Load all other plugins using commonPlugins.cmd
 < $(ADCORE)/iocBoot/commonPlugins.cmd
 
-set_requestfile_path("$(ADSIS8300)/SIS8300App/Db")
+set_requestfile_path("$(SIS8300)/SIS8300App/Db")
 
 #asynSetTraceIOMask("$(PORT)",0,2)
 #asynSetTraceMask("$(PORT)",0,255)
