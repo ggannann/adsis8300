@@ -47,9 +47,9 @@
 
 #define MAX_PATH_LEN                   32
 #define MAX_LOG_STR_LEN                256
-#define ADSIS8300_NUM_CHANNELS         10
+#define SIS8300_NUM_CHANNELS           10
 
-#define ADSIS8300_LOG(p, s, t, r) ({\
+#define SIS8300_LOG(p, s, t, r) ({\
 	if (t == 0) { \
 		snprintf(mSisLogStr, MAX_LOG_STR_LEN, "%s %s::%s: %s", \
 				p, driverName, __func__, s); \
@@ -63,18 +63,18 @@
 	printf("%s\n", mSisLogStr); \
 })
 
-#define ADSIS8300_INF(s) ({\
-	ADSIS8300_LOG("[INF]", s, 0, 0); \
+#define SIS8300_INF(s) ({\
+	SIS8300_LOG("[INF]", s, 0, 0); \
 })
 
-#define ADSIS8300_ERR(s) ({\
-	ADSIS8300_LOG("[ERR]", s, 0, 0); \
+#define SIS8300_ERR(s) ({\
+	SIS8300_LOG("[ERR]", s, 0, 0); \
 })
 
 #define SIS8300DRV_CALL_0(s, x) ({\
 	int __ret = x; \
 	if (__ret) {\
-		ADSIS8300_LOG("[ERR]", s, 1, __ret); \
+		SIS8300_LOG("[ERR]", s, 1, __ret); \
 	} \
 	__ret; \
 })
@@ -116,14 +116,13 @@
 	x; \
 }
 
-/** Struck SIS8300 driver; does 1-D waveforms on 10 channels.
-  * Inherits from asynNDArrayDriver */
-class epicsShareClass ADSIS8300 : public asynNDArrayDriver {
+/** Struck SIS8300 driver */
+class epicsShareClass SIS8300 : public asynNDArrayDriver {
 public:
-	ADSIS8300(const char *portName, const char *devicePath,
+	SIS8300(const char *portName, const char *devicePath,
 			int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
 			int maxBuffers, size_t maxMemory, int priority, int stackSize);
-	virtual ~ADSIS8300();
+	virtual ~SIS8300();
 
     /* These are the methods that we override from asynNDArrayDriver */
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);

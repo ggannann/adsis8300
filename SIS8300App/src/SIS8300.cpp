@@ -36,23 +36,23 @@
 
 #include <SIS8300.h>
 
-static const char *driverName = "ADSIS8300";
+static const char *driverName = "SIS8300";
 
 /**
- * Exit handler, delete the ADSIS8300 object.
+ * Exit handler, delete the SIS8300 object.
  */
 static void exitHandler(void *drvPvt) {
-	ADSIS8300 *pPvt = (ADSIS8300 *) drvPvt;
+	SIS8300 *pPvt = (SIS8300 *) drvPvt;
 	delete pPvt;
 }
 
 static void sisTaskC(void *drvPvt)
 {
-    ADSIS8300 *pPvt = (ADSIS8300 *)drvPvt;
+    SIS8300 *pPvt = (SIS8300 *)drvPvt;
     pPvt->sisTask();
 }
 
-/** Constructor for SIS8300; most parameters are simply passed to ADDriver::ADDriver.
+/** Constructor for SIS8300; most parameters are simply passed to asynNDArrayDriver::asynNDArrayDriver.
   * After calling the base class constructor this method creates a thread to compute the simulated detector data,
   * and sets reasonable default values for parameters defined in this class, asynNDArrayDriver and ADDriver.
   * \param[in] portName The name of the asyn port driver to be created.
@@ -68,7 +68,7 @@ static void sisTaskC(void *drvPvt)
   * \param[in] priority The thread priority for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   */
-ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
+SIS8300::SIS8300(const char *portName, const char *devicePath,
 		int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
 		int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
@@ -150,7 +150,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(P_RTMType, 0);
     status |= setDoubleParam(P_RTMTemp1, 0);
     status |= setDoubleParam(P_RTMTemp2, 0);
-    ADSIS8300_INF("No error");
+    SIS8300_INF("No error");
 
     if (status) {
         E(printf("unable to set parameters\n"));
@@ -175,7 +175,7 @@ ADSIS8300::ADSIS8300(const char *portName, const char *devicePath,
 	I(printf("Init done...\n"));
 }
 
-ADSIS8300::~ADSIS8300() {
+SIS8300::~SIS8300() {
 	D(printf("Shutdown and freeing up memory...\n"));
 
 	this->lock();
@@ -187,7 +187,7 @@ ADSIS8300::~ADSIS8300() {
 }
 
 /** Template function to compute the simulated detector data for any data type */
-int ADSIS8300::acquireRawArrays()
+int SIS8300::acquireRawArrays()
 {
     size_t dims[2];
     int numAiSamples;
@@ -200,7 +200,7 @@ int ADSIS8300::acquireRawArrays()
 
     /* raw data samples of a given channel are stored in sequence */
     dims[0] = numAiSamples;
-    dims[1] = ADSIS8300_NUM_CHANNELS;
+    dims[1] = SIS8300_NUM_CHANNELS;
 
     /* local NDArray is for raw data samples */
     if (mRawDataArray) {
@@ -208,9 +208,9 @@ int ADSIS8300::acquireRawArrays()
     }
     mRawDataArray = pNDArrayPool->alloc(2, dims, NDUInt16, 0, 0);
     pRaw = (epicsUInt16 *)mRawDataArray->pData;
-    memset(pRaw, 0, ADSIS8300_NUM_CHANNELS * numAiSamples * sizeof(epicsUInt16));
+    memset(pRaw, 0, SIS8300_NUM_CHANNELS * numAiSamples * sizeof(epicsUInt16));
 
-    for (aich = 0; aich < ADSIS8300_NUM_CHANNELS; aich++) {
+    for (aich = 0; aich < SIS8300_NUM_CHANNELS; aich++) {
         if (!(mChannelMask & (1 << aich))) {
             continue;
         }
@@ -234,7 +234,7 @@ int ADSIS8300::acquireRawArrays()
     return 0;
 }
 
-template <typename epicsType> int ADSIS8300::convertArraysT()
+template <typename epicsType> int SIS8300::convertArraysT()
 {
     size_t dims[2];
     int numAiSamples;
@@ -256,7 +256,7 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
     pRaw = (epicsUInt16 *)mRawDataArray->pData;
 
     /* converted AI data samples of all channel are interleaved */
-    dims[0] = ADSIS8300_NUM_CHANNELS;
+    dims[0] = SIS8300_NUM_CHANNELS;
     dims[1] = numAiSamples;
 
     /* 0th NDArray is for converted AI data samples */
@@ -265,9 +265,9 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
     }
     this->pArrays[0] = pNDArrayPool->alloc(2, dims, dataType, 0, 0);
     pData = (epicsType *)this->pArrays[0]->pData;
-    memset(pData, 0, ADSIS8300_NUM_CHANNELS * numAiSamples * sizeof(epicsType));
+    memset(pData, 0, SIS8300_NUM_CHANNELS * numAiSamples * sizeof(epicsType));
 
-    for (aich = 0; aich < ADSIS8300_NUM_CHANNELS; aich++) {
+    for (aich = 0; aich < SIS8300_NUM_CHANNELS; aich++) {
     	if (!(mChannelMask & (1 << aich))) {
             continue;
         }
@@ -285,7 +285,7 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
 			*pVal = (epicsType)((double)*(pChRaw + i) * convFactor + convOffset);
 //			printf("%f ", (double)*pVal);
 //			fprintf(fp, "%f\n", (double)*pVal);
-			pVal += ADSIS8300_NUM_CHANNELS;
+			pVal += SIS8300_NUM_CHANNELS;
 		}
 		D0(printf("\n"));
 //		fclose(fp);
@@ -294,7 +294,7 @@ template <typename epicsType> int ADSIS8300::convertArraysT()
     return 0;
 }
 
-int ADSIS8300::acquireArrays()
+int SIS8300::acquireArrays()
 {
     int dataType;
     int ret;
@@ -338,7 +338,7 @@ int ADSIS8300::acquireArrays()
     }
 }
 
-void ADSIS8300::setAcquire(int value)
+void SIS8300::setAcquire(int value)
 {
     if (value && !acquiring_) {
         /* Send an event to wake up the simulation task */
@@ -354,7 +354,7 @@ void ADSIS8300::setAcquire(int value)
     }
 }
 
-int ADSIS8300::initDeviceDone()
+int SIS8300::initDeviceDone()
 {
 	int ret = 0;
 
@@ -363,7 +363,7 @@ int ADSIS8300::initDeviceDone()
 	return ret;
 }
 
-int ADSIS8300::armDevice()
+int SIS8300::armDevice()
 {
 	int ret;
 
@@ -374,7 +374,7 @@ int ADSIS8300::armDevice()
 	return ret;
 }
 
-int ADSIS8300::disarmDevice()
+int SIS8300::disarmDevice()
 {
 	int ret;
 
@@ -389,7 +389,7 @@ int ADSIS8300::disarmDevice()
 	return ret;
 }
 
-int ADSIS8300::waitForDevice()
+int SIS8300::waitForDevice()
 {
 	int ret;
 
@@ -400,7 +400,7 @@ int ADSIS8300::waitForDevice()
 	return ret;
 }
 
-int ADSIS8300::deviceDone()
+int SIS8300::deviceDone()
 {
 	int ret = 0;
 
@@ -409,7 +409,7 @@ int ADSIS8300::deviceDone()
 	return ret;
 }
 
-int ADSIS8300::updateParameters()
+int SIS8300::updateParameters()
 {
 	int ret = 0;
 
@@ -420,7 +420,7 @@ int ADSIS8300::updateParameters()
 
 /** This thread calls computeImage to compute new image data and does the callbacks to send it to higher layers.
   * It implements the logic for single, multiple or continuous acquisition. */
-void ADSIS8300::sisTask()
+void SIS8300::sisTask()
 {
     int status = asynSuccess;
     NDArray *pData;
@@ -514,7 +514,7 @@ taskStart:
         }
 
         if (mChannelMask == 0) {
-        	ADSIS8300_ERR("No channels enabled!");
+        	SIS8300_ERR("No channels enabled!");
 			acquiring_ = 0;
 			setIntegerParam(P_Acquire, 0);
 			goto taskStart;
@@ -567,7 +567,7 @@ taskStart:
 		}
 		D(printf("7 Acquiring = %d..\n", acquiring_));
 
-        ADSIS8300_INF("No error");
+        SIS8300_INF("No error");
 
         epicsTimeGetCurrent(&frameTime);
         getIntegerParam(NDArrayCounter, &arrayCounter);
@@ -611,7 +611,7 @@ taskStart:
   * For all parameters it sets the value in the parameter library and calls any registered callbacks..
   * \param[in] pasynUser pasynUser structure that encodes the reason and address.
   * \param[in] value Value to write. */
-asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
+asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
     int function = pasynUser->reason;
     int addr;
@@ -724,7 +724,7 @@ asynStatus ADSIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
   * For all parameters it sets the value in the parameter library and calls any registered callbacks..
   * \param[in] pasynUser pasynUser structure that encodes the reason and address.
   * \param[in] value Value to write. */
-asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
+asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
     int function = pasynUser->reason;
     int addr;
@@ -790,7 +790,7 @@ asynStatus ADSIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   * \param[in] fp File pointed passed by caller where the output is written to.
   * \param[in] details If >0 then driver details are printed.
   */
-void ADSIS8300::report(FILE *fp, int details)
+void SIS8300::report(FILE *fp, int details)
 {
     int deviceType;
     int firmwareVersion;
@@ -823,7 +823,7 @@ void ADSIS8300::report(FILE *fp, int details)
     asynNDArrayDriver::report(fp, details);
 }
 
-int ADSIS8300::initDevice()
+int SIS8300::initDevice()
 {
     unsigned int deviceType;
     unsigned int firmwareVersion;
@@ -876,7 +876,7 @@ int ADSIS8300::initDevice()
 	return 0;
 }
 
-int ADSIS8300::destroyDevice()
+int SIS8300::destroyDevice()
 {
 	int ret;
 
@@ -886,14 +886,14 @@ int ADSIS8300::destroyDevice()
 	return ret;
 }
 
-int ADSIS8300::enableChannel(unsigned int channel)
+int SIS8300::enableChannel(unsigned int channel)
 {
    	mChannelMask |= (1 << channel);
     D(printf("channel mask %X\n", mChannelMask));
 	return 0;
 }
 
-int ADSIS8300::disableChannel(unsigned int channel)
+int SIS8300::disableChannel(unsigned int channel)
 {
    	mChannelMask &= ~(1 << channel);
     D(printf("channel mask %X\n", mChannelMask));
@@ -905,7 +905,7 @@ extern "C" int SIS8300Config(const char *portName, const char *devicePath,
 		int maxAddr, int numAiSamples, int dataType, int maxBuffers, int maxMemory,
 		int priority, int stackSize)
 {
-    new ADSIS8300(portName, devicePath,
+    new SIS8300(portName, devicePath,
     		maxAddr,
 			0,
     		numAiSamples,
