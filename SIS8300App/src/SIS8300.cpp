@@ -327,7 +327,6 @@ int SIS8300::updateParameters()
 	return ret;
 }
 
-/** Template function to compute the simulated detector data for any data type */
 int SIS8300::acquireRawArrays()
 {
     size_t dims[2];
