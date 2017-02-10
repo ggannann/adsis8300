@@ -186,6 +186,147 @@ SIS8300::~SIS8300() {
 	I(printf("Shutdown complete!\n"));
 }
 
+int SIS8300::initDevice()
+{
+    unsigned int deviceType;
+    unsigned int firmwareVersion;
+    unsigned long memorySizeMb;
+    unsigned int serialNumber;
+    int ret;
+
+    D(printf("Enter\n"));
+
+	ret = SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
+	if (ret) {
+		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &serialNumber));
+	if (ret) {
+		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &firmwareVersion));
+	if (ret) {
+		return ret;
+	}
+	firmwareVersion &= 0x0000FFFF;
+	ret = SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &deviceType));
+	if (ret) {
+		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &memorySizeMb));
+	if (ret) {
+		return ret;
+	}
+	memorySizeMb /= (1024*1024);
+
+	ret = SIS8300DRV_CALL("sis8300drv_init_adc", sis8300drv_init_adc(mSisDevice));
+	if (ret) {
+		return ret;
+	}
+
+	setIntegerParam(mSISFirmwareVersion, firmwareVersion);
+	setIntegerParam(mSISSerialNumber, serialNumber);
+	setIntegerParam(mSISMemorySize, memorySizeMb);
+	setIntegerParam(mSISDeviceType, deviceType);
+	callParamCallbacks(0);
+
+	I(printf("Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
+			deviceType,
+			serialNumber,
+			firmwareVersion,
+			(unsigned int)memorySizeMb));
+
+	return 0;
+}
+
+int SIS8300::destroyDevice()
+{
+	int ret;
+
+	D(printf("Enter\n"));
+
+	ret = SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
+	return ret;
+}
+
+int SIS8300::enableChannel(unsigned int channel)
+{
+   	mChannelMask |= (1 << channel);
+    D(printf("channel mask %X\n", mChannelMask));
+	return 0;
+}
+
+int SIS8300::disableChannel(unsigned int channel)
+{
+   	mChannelMask &= ~(1 << channel);
+    D(printf("channel mask %X\n", mChannelMask));
+	return 0;
+}
+
+int SIS8300::initDeviceDone()
+{
+	int ret = 0;
+
+	D(printf("Enter\n"));
+
+	return ret;
+}
+
+int SIS8300::armDevice()
+{
+	int ret;
+
+	D(printf("Enter\n"));
+
+	ret = SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
+
+	return ret;
+}
+
+int SIS8300::disarmDevice()
+{
+	int ret;
+
+	D(printf("Enter\n"));
+
+	ret = SIS8300DRV_CALL("sis8300drv_disarm_device", sis8300drv_disarm_device(mSisDevice));
+	if (ret) {
+//		return ret;
+	}
+	ret = SIS8300DRV_CALL("sis8300drv_release_irq", sis8300drv_release_irq(mSisDevice, irq_type_usr));
+
+	return ret;
+}
+
+int SIS8300::waitForDevice()
+{
+	int ret;
+
+	D(printf("Enter\n"));
+
+   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
+
+	return ret;
+}
+
+int SIS8300::deviceDone()
+{
+	int ret = 0;
+
+	D(printf("Enter\n"));
+
+	return ret;
+}
+
+int SIS8300::updateParameters()
+{
+	int ret = 0;
+
+	D(printf("Enter\n"));
+
+	return ret;
+}
+
 /** Template function to compute the simulated detector data for any data type */
 int SIS8300::acquireRawArrays()
 {
@@ -352,70 +493,6 @@ void SIS8300::setAcquire(int value)
 
         epicsEventSignal(this->stopEventId_); 
     }
-}
-
-int SIS8300::initDeviceDone()
-{
-	int ret = 0;
-
-	D(printf("Enter\n"));
-
-	return ret;
-}
-
-int SIS8300::armDevice()
-{
-	int ret;
-
-	D(printf("Enter\n"));
-
-	ret = SIS8300DRV_CALL("sis8300drv_arm_device", sis8300drv_arm_device(mSisDevice));
-
-	return ret;
-}
-
-int SIS8300::disarmDevice()
-{
-	int ret;
-
-	D(printf("Enter\n"));
-
-	ret = SIS8300DRV_CALL("sis8300drv_disarm_device", sis8300drv_disarm_device(mSisDevice));
-	if (ret) {
-//		return ret;
-	}
-	ret = SIS8300DRV_CALL("sis8300drv_release_irq", sis8300drv_release_irq(mSisDevice, irq_type_usr));
-
-	return ret;
-}
-
-int SIS8300::waitForDevice()
-{
-	int ret;
-
-	D(printf("Enter\n"));
-
-   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
-
-	return ret;
-}
-
-int SIS8300::deviceDone()
-{
-	int ret = 0;
-
-	D(printf("Enter\n"));
-
-	return ret;
-}
-
-int SIS8300::updateParameters()
-{
-	int ret = 0;
-
-	D(printf("Enter\n"));
-
-	return ret;
 }
 
 /** This thread calls computeImage to compute new image data and does the callbacks to send it to higher layers.
@@ -821,83 +898,6 @@ void SIS8300::report(FILE *fp, int details)
     }
     /* Invoke the base class method */
     asynNDArrayDriver::report(fp, details);
-}
-
-int SIS8300::initDevice()
-{
-    unsigned int deviceType;
-    unsigned int firmwareVersion;
-    unsigned long memorySizeMb;
-    unsigned int serialNumber;
-    int ret;
-
-    D(printf("Enter\n"));
-
-	ret = SIS8300DRV_CALL("sis8300drv_open_device", sis8300drv_open_device(mSisDevice));
-	if (ret) {
-		return ret;
-	}
-	ret = SIS8300DRV_CALL("sis8300drv_get_serial", sis8300drv_get_serial(mSisDevice, &serialNumber));
-	if (ret) {
-		return ret;
-	}
-	ret = SIS8300DRV_CALL("sis8300drv_get_fw_version", sis8300drv_get_fw_version(mSisDevice, &firmwareVersion));
-	if (ret) {
-		return ret;
-	}
-	firmwareVersion &= 0x0000FFFF;
-	ret = SIS8300DRV_CALL("sis8300drv_get_device_type", sis8300drv_get_device_type(mSisDevice, &deviceType));
-	if (ret) {
-		return ret;
-	}
-	ret = SIS8300DRV_CALL("sis8300drv_get_memory_size", sis8300drv_get_memory_size(mSisDevice, &memorySizeMb));
-	if (ret) {
-		return ret;
-	}
-	memorySizeMb /= (1024*1024);
-
-	ret = SIS8300DRV_CALL("sis8300drv_init_adc", sis8300drv_init_adc(mSisDevice));
-	if (ret) {
-		return ret;
-	}
-
-	setIntegerParam(mSISFirmwareVersion, firmwareVersion);
-	setIntegerParam(mSISSerialNumber, serialNumber);
-	setIntegerParam(mSISMemorySize, memorySizeMb);
-	setIntegerParam(mSISDeviceType, deviceType);
-	callParamCallbacks(0);
-
-	I(printf("Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
-			deviceType,
-			serialNumber,
-			firmwareVersion,
-			(unsigned int)memorySizeMb));
-
-	return 0;
-}
-
-int SIS8300::destroyDevice()
-{
-	int ret;
-
-	D(printf("Enter\n"));
-
-	ret = SIS8300DRV_CALL("sis8300drv_close_device", sis8300drv_close_device(mSisDevice));
-	return ret;
-}
-
-int SIS8300::enableChannel(unsigned int channel)
-{
-   	mChannelMask |= (1 << channel);
-    D(printf("channel mask %X\n", mChannelMask));
-	return 0;
-}
-
-int SIS8300::disableChannel(unsigned int channel)
-{
-   	mChannelMask &= ~(1 << channel);
-    D(printf("channel mask %X\n", mChannelMask));
-	return 0;
 }
 
 /** Configuration command, called directly or from iocsh */
