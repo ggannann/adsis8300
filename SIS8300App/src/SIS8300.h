@@ -36,7 +36,7 @@
 #define SisChannelDecimFactorString    "SIS_DECIM_FACTOR"
 #define SisChannelDecimOffsetString    "SIS_DECIM_OFFSET"
 #define SisResetString                 "SIS_RESET"
-#define SisFirmwareVersionString       "SIS_FW_VERSION"
+#define SisFwVersionString             "SIS_FW_VERSION"
 #define SisDeviceTypeString            "SIS_DEVICE_TYPE"
 #define SisSerialNumberString          "SIS_SERIAL_NUMBER"
 #define SisMemorySizeString            "SIS_MEMORY_SIZE"
@@ -151,7 +151,7 @@ protected:
     int mSISDecimOffset;
     int mSISReset;
     int mSISMessage;
-    int mSISFirmwareVersion;
+    int mSISFwVersion;
     int mSISSerialNumber;
     int mSISDeviceType;
     int mSISMemorySize;

@@ -90,7 +90,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     D(printf("%d addresses, %d parameters\n", maxAddr, SIS8300_NUM_PARAMS+numParams));
 
     mRawDataArray = NULL;
-    mNumArrays = 1;
+    mNumArrays = 2;
 
 	/* Create an EPICS exit handler */
 	epicsAtExit(exitHandler, this);
@@ -114,7 +114,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     }
 
     createParam(SisAcquireString,               asynParamInt32, &mSISAcquire);
-    createParam(SisNumAiSamplesString,         asynParamInt32,  &mSISNumAiSamples);
+    createParam(SisNumAiSamplesString,          asynParamInt32, &mSISNumAiSamples);
     createParam(SisClockSourceString,           asynParamInt32, &mSISClockSource);
     createParam(SisClockFreqString,           asynParamFloat64, &mSISClockFreq);
     createParam(SisClockDivString,              asynParamInt32, &mSISClockDiv);
@@ -131,7 +131,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisChannelDecimOffsetString,    asynParamInt32, &mSISDecimOffset);
     createParam(SisResetString,                 asynParamInt32, &mSISReset);
     createParam(SisMessageString,               asynParamOctet, &mSISMessage);
-    createParam(SisFirmwareVersionString,       asynParamInt32, &mSISFirmwareVersion);
+    createParam(SisFwVersionString,             asynParamInt32, &mSISFwVersion);
     createParam(SisSerialNumberString,          asynParamInt32, &mSISSerialNumber);
     createParam(SisMemorySizeString,            asynParamInt32, &mSISMemorySize);
     createParam(SisDeviceTypeString,            asynParamInt32, &mSISDeviceType);
@@ -143,7 +143,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(mSISNumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
     status |= setIntegerParam(mSISAcquire, 0);
-    status |= setIntegerParam(mSISFirmwareVersion, 0);
+    status |= setIntegerParam(mSISFwVersion, 0);
     status |= setIntegerParam(mSISSerialNumber, 0);
     status |= setIntegerParam(mSISMemorySize, 0);
     status |= setIntegerParam(mSISDeviceType, 0);
@@ -224,13 +224,13 @@ int SIS8300::initDevice()
 		return ret;
 	}
 
-	setIntegerParam(mSISFirmwareVersion, firmwareVersion);
+	setIntegerParam(mSISFwVersion, firmwareVersion);
 	setIntegerParam(mSISSerialNumber, serialNumber);
 	setIntegerParam(mSISMemorySize, memorySizeMb);
 	setIntegerParam(mSISDeviceType, deviceType);
 	callParamCallbacks(0);
 
-	I(printf("Device is %X, serial no. %d, fw 0x%4X, mem size %d MB\n",
+	I(printf("Device is %X, serial no. %d, fw 0x%X, mem size %d MB\n",
 			deviceType,
 			serialNumber,
 			firmwareVersion,
@@ -667,6 +667,7 @@ taskStart:
             /* Must release the lock here, or we can get into a deadlock, because we can
              * block on the plugin lock, and the plugin can be calling us */
             this->unlock();
+    		D(printf("8 doCallbacksGenericPointer for pArray %d..\n", a));
             doCallbacksGenericPointer(pData, NDArrayData, a);
             this->lock();
         }
@@ -875,7 +876,7 @@ void SIS8300::report(FILE *fp, int details)
 
     fprintf(fp, "Struck           : %s\n", this->portName);
     fprintf(fp, "Device path      : %s\n", mSisDevicePath);
-	getIntegerParam(mSISFirmwareVersion, &firmwareVersion);
+	getIntegerParam(mSISFwVersion, &firmwareVersion);
 	getIntegerParam(mSISSerialNumber, &serialNumber);
 	getIntegerParam(mSISMemorySize, &memorySizeMb);
 	getIntegerParam(mSISDeviceType, &deviceType);
