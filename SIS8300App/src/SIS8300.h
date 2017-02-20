@@ -44,6 +44,7 @@
 #define SisRTMTempGetString            "SIS_RTM_TEMP_GET"
 #define SisRTMTemp1String              "SIS_RTM_TEMP1"
 #define SisRTMTemp2String              "SIS_RTM_TEMP2"
+#define SisHarlinkString               "SIS_HARLINK"
 
 #define MAX_PATH_LEN                   32
 #define MAX_LOG_STR_LEN                256
@@ -159,9 +160,9 @@ protected:
     int mSISRTMTempGet;
     int mSISRTMTemp1;
     int mSISRTMTemp2;
+    int mSISHarlink;
 
-    int mSISDummy;
-    #define SIS8300_LAST_PARAM mSISDummy
+    #define SIS8300_LAST_PARAM mSISHarlink
 
     /* These are the methods that are new to this class */
     int acquireRawArrays();

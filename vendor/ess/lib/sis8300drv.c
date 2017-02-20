@@ -1934,6 +1934,46 @@ int sis8300drv_read_harlink(sis8300drv_usr *sisuser, unsigned *data) {
 
 
 /**
+ * @brief Write the state of Harlink digital output port.
+ * @param [in] sisuser User context struct.
+ * @param [out] data Digital output port value.
+ *
+ * @retval status_success Data transfered successfully.
+ * @retval status_device_access Can't access device registers.
+ * @retval status_no_device Device not opened.
+ */
+int sis8300drv_write_harlink(sis8300drv_usr *sisuser, unsigned data) {
+    int             status;
+    uint32_t        ui32_reg_val;
+    sis8300drv_dev  *sisdevice;
+
+    sisdevice = sisuser->device;
+    if (!sisdevice) {
+        return status_no_device;
+    }
+
+    status = sis8300_reg_read(sisdevice->handle,
+            SIS8300_HARLINK_IN_OUT_CONTROL_REG, &ui32_reg_val);
+    if (status) {
+        return status_device_access;
+    }
+
+    ui32_reg_val &= ~0x001F0000;
+    /* Bit 20 enables outputs. */
+    ui32_reg_val |= (1 << 20);
+    ui32_reg_val |= ((data & 0xF) << 16);
+
+    status = sis8300_reg_write(sisdevice->handle,
+            SIS8300_HARLINK_IN_OUT_CONTROL_REG, ui32_reg_val);
+    if (status) {
+        return status_device_access;
+    }
+
+    return status_success;
+}
+
+
+/**
  * @brief Get the serial number of the device.
  * @param [in] sisuser User context struct.
  * @param [out] serial Device serial number.

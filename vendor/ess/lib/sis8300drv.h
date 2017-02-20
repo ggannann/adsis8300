@@ -244,6 +244,9 @@ int sis8300drv_read_ao(sis8300drv_usr *sisuser,
 int sis8300drv_read_harlink(sis8300drv_usr *sisuser,
         unsigned *data);
 
+int sis8300drv_write_harlink(sis8300drv_usr *sisuser,
+        unsigned data);
+
 int sis8300drv_get_channel_mask(sis8300drv_usr *sisuser,
         unsigned *channel_mask);
 

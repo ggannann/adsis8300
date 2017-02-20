@@ -139,6 +139,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisRTMTemp1String,            asynParamFloat64, &mSISRTMTemp1);
     createParam(SisRTMTemp2String,            asynParamFloat64, &mSISRTMTemp2);
     createParam(SisRTMTempGetString,            asynParamInt32, &mSISRTMTempGet);
+    createParam(SisHarlinkString,               asynParamInt32, &mSISHarlink);
 
     status |= setIntegerParam(mSISNumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
@@ -774,6 +775,11 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 				status = asynError;
 			}
 			setDoubleParam(mSISRTMTemp2, temp);
+		}
+    } else if (function == mSISHarlink) {
+   		ret = SIS8300DRV_CALL("sis8300drv_write_harlink", sis8300drv_write_harlink(mSisDevice, value));
+		if (ret) {
+			status = asynError;
 		}
     } else {
         /* If this parameter belongs to a base class call its method */

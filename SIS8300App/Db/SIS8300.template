@@ -361,6 +361,22 @@ record(ai, "$(P)$(R)RTMTemp2_RBV")
     field(SCAN, "I/O Intr")
 }
 
+record(longout, "$(P)$(R)Harlink")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_HARLINK")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)Harlink_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_HARLINK")
+    field(SCAN, "I/O Intr")
+}
+
 
 
 
