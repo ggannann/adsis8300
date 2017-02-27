@@ -315,6 +315,10 @@ record(mbbo, "$(P)$(R)RTMType") {
     field(ONST, "SIS8900")
     field(TWVL, "2")
     field(TWST, "DWC8VM1")
+    field(THVL, "3")
+    field(THST, "DS8VM1")
+    field(FRVL, "4")
+    field(FRST, "DWC8300-LF")
     field(PINI, "YES")
     field(VAL,  "0")
     info(autosaveFields, "VAL")
@@ -330,6 +334,10 @@ record(mbbi, "$(P)$(R)RTMType_RBV") {
     field(ONST, "SIS8900")
     field(TWVL, "2")
     field(TWST, "DWC8VM1")
+    field(THVL, "3")
+    field(THST, "DS8VM1")
+    field(FRVL, "4")
+    field(FRST, "DWC8300-LF")
 }
 
 record(bo, "$(P)$(R)RTMTempGet")

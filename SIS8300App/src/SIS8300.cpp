@@ -761,8 +761,15 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
     } else if (function == mSISRTMTempGet) {
 		int RTMType = 0;
 		getIntegerParam(mSISRTMType, &RTMType);
-		/* Only DWC8VM1 has attenuators */
-		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
+		/* Only DWC8VM1 and DWC8300-LF have temperature sensors */
+
+		/* XXX: This needs to go away in favor of IPMI management and monitoring
+		 * of temperatures for the complete crate!
+		 * Here only for RTM evaluation purposes and since IPMI readout is not
+		 * available at the moment!
+		 */
+		if (((sis8300drv_rtm)RTMType == rtm_dwc8300lf) ||
+				((sis8300drv_rtm)RTMType == rtm_dwc8300lf)) {
 			double temp;
 			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_temperature_get", sis8300drv_i2c_rtm_temperature_get(mSisDevice, (sis8300drv_rtm)RTMType, rtm_temp_ad8363, &temp));
 			if (ret) {
@@ -838,8 +845,9 @@ asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     } else if (function == mSISAttenuation) {
 		int RTMType = 0;
 		getIntegerParam(mSISRTMType, &RTMType);
-		/* Only DWC8VM1 has attenuators */
-		if ((sis8300drv_rtm)RTMType == rtm_dwc8vm1) {
+		/* Only DWC8VM1 and DWC8300-LF have attenuators */
+		if (((sis8300drv_rtm)RTMType == rtm_dwc8vm1) ||
+				((sis8300drv_rtm)RTMType == rtm_dwc8300lf)) {
 			int val = (int)((value + 31.5) * 2);
 			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, val));
 			if (ret) {
