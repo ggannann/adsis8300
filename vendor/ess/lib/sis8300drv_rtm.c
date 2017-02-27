@@ -1,5 +1,6 @@
 /**
  * Struck 8300 Linux userspace library.
+ * Copyright (C) 2016 - 2017 European Spallation Source ERIC
  * Copyright (C) 2015 Cosylab
  *
  * This program is free software: you can redistribute it and/or modify
@@ -253,11 +254,9 @@ int sis8300drv_i2c_rtm_attenuator_set(sis8300drv_usr *sisuser, sis8300drv_rtm rt
             clk_bit = SIS8300_PCA9535_SPI_BIT;
             spi_bit = SIS8300_PCA9535_CLK_BIT;
             break;
-/*      TODO: uncomment when we can test this
- *      case rtm_dwc8300:
+      case rtm_dwc8300lf:
             status = (att_num > SIS8300DRV_RTM_ATT_CH9) ? status_argument_invalid : status_success;
             break;
-*/
         default:
             status = status_argument_invalid;
             break;
@@ -542,6 +541,7 @@ int sis8300drv_i2c_rtm_temperature_get(sis8300drv_usr *sisuser,
     /* check which rtm we are talking about */
     switch (rtm) {
         case rtm_dwc8vm1:
+        case rtm_dwc8300lf:
         	status = status_success;
             break;
         default:

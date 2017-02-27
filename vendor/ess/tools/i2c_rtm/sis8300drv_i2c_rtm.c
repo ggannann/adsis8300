@@ -1,5 +1,6 @@
 /**
  * Struck 8300 Linux userspace library.
+ * Copyright (C) 2016 - 2017 European Spallation Source ERIC
  * Copyright (C) 2015 Cosylab
  *
  * This program is free software: you can redistribute it and/or modify
@@ -25,8 +26,13 @@
 
 void usage(char *argv0) {
     printf("Usage: %s [device_node] [rtm_type] [channel] [att val]\n", argv0);
-    printf("RTM Type is \n\trtm_sis8900 = 0,\n\trtm_dwc8vm1 = 1,\n\trtm_ds8vm1  = 2,\n\tnone = 3\n");
-    printf("Channel 0-9 is input attenuation (to ADCs) on DWC8300\n");
+    printf("RTM Type is:\n");
+    printf("\tnone       = 0\n");
+    printf("\tSIS8900    = 1\n");
+    printf("\tDWC8VM1    = 2\n");
+    printf("\tDS8VM1     = 3\n");
+    printf("\tDWC8300-LF = 4\n");
+    printf("Channel 0-9 is input attenuation (to ADCs) on DWC8300-LF\n");
     printf("Channel 0-7 is input attenuation (to ADCs) on xxxVM\n");
 	printf("att_val is between 0 and 63 where\n");
 	printf("\tatt_val[dBm] = -31.5+att_val_idx/2 \n");
@@ -48,21 +54,20 @@ int main(int argc, char **argv) {
         return -1;
     }
     
-    sisuser = malloc(sizeof(sis8300drv_usr));
-    sisuser->file = argv[1];
-
-    status = sis8300drv_open_device(sisuser);
-    if (status) {
-        printf("sis8300drv_open_device error: %d\n", status);
-        return -1;
-    }
-    
     rtm_type = (sis8300drv_rtm)strtoul(argv[2], NULL, 10);
     chan = (int)strtoul(argv[3], NULL, 10);
     val = (int)strtoul(argv[4], NULL, 10);
 
     /* Do some sanity checking.. */
-    if (chan > 9 || chan < 0) {
+    if (rtm_type == 0) {
+    	usage(argv[0]);
+        return -1;
+    }
+	if (rtm_type == rtm_sis8900) {
+		printf("No settings available for rtm_sis8900\n");
+		return -1;
+	}
+	if (chan > 9 || chan < 0) {
     	usage(argv[0]);
         return -1;
     }
@@ -74,20 +79,21 @@ int main(int argc, char **argv) {
     	usage(argv[0]);
         return -1;
     }
-   
-	if (rtm_type == rtm_sis8900) {
-		printf("No settings available for rtm_sis8900\n");
-		sis8300drv_close_device(sisuser);
-		return 0;
-	}
+
+    sisuser = malloc(sizeof(sis8300drv_usr));
+    sisuser->file = argv[1];
+
+    status = sis8300drv_open_device(sisuser);
+    if (status) {
+        printf("sis8300drv_open_device error: %d\n", status);
+        return -1;
+    }
 	
-	if (chan == 9) {
-		if (rtm_type == rtm_dwc8vm1 || rtm_type == rtm_ds8vm1) {
-			printf("Set common mode voltage for VM to 0x%x\n", val);
-			status = sis8300drv_i2c_rtm_vm_common_mode_set(sisuser, rtm_type, (unsigned) val);
-			if (status) {
-				printf("Fail %i\n", status);
-			}
+	if (((rtm_type == rtm_dwc8vm1) || (rtm_type == rtm_ds8vm1)) && (chan == 9)) {
+		printf("Set common mode voltage for VM to 0x%x\n", val);
+		status = sis8300drv_i2c_rtm_vm_common_mode_set(sisuser, rtm_type, (unsigned) val);
+		if (status) {
+			printf("Fail %i\n", status);
 		}
 	} else {
 		printf("Setting att val for rtm %i, chan %i to %2.2f\n",  rtm_type, chan, -31.5 + val * 0.5);
@@ -96,9 +102,8 @@ int main(int argc, char **argv) {
 			printf("Fail %i\n", status);
 		}
 	}
-
     
     sis8300drv_close_device(sisuser);
     
-    return 0;
+    return status;
 }
