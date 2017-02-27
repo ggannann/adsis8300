@@ -601,7 +601,7 @@ int sis8300drv_i2c_rtm_temperature_get(sis8300drv_usr *sisuser,
     switch (source) {
 		case rtm_temp_ad8363:
 			conv = conv & ~0x80000000;
-			conv >>= 7;
+			conv >>= 6;
 		    *val = (double)((conv * (3.3 / 0x1000000)) - 1.275) / 0.005;
 			status = status_success;
 			break;

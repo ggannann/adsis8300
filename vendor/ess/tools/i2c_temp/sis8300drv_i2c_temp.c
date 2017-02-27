@@ -23,6 +23,16 @@
 
 #include "sis8300drv.h"
 
+void usage(char *argv0) {
+    printf("Usage: %s [device_node] [rtm_type]\n", argv0);
+    printf("RTM Type is:\n");
+    printf("\tnone       = 0\n");
+    printf("\tSIS8900    = 1\n");
+    printf("\tDWC8VM1    = 2\n");
+    printf("\tDS8VM1     = 3\n");
+    printf("\tDWC8300-LF = 4\n");
+}
+
 int main(int argc, char **argv) {
 	sis8300drv_usr *sisuser;
     sis8300drv_rtm rtm_type;
@@ -30,16 +40,19 @@ int main(int argc, char **argv) {
     double v;
 
     if (argc != 3) {
-        printf("Usage: %s [device_node] [rtm_type]\n", argv[0]);
-        printf("RTM Type is \n\trtm_sis8900 = 0\n\trtm_dwc8vm1 = 1\n\trtm_ds8vm1 = 2\n");
+    	usage(argv[0]);
         return -1;
     }
     
     rtm_type = (sis8300drv_rtm)strtoul(argv[2], NULL, 10);
-    if (rtm_type != rtm_dwc8vm1) {
-    	printf("This RTM type does not support temperature read-out\n");
-    	return -1;
+    if (rtm_type == 0) {
+    	usage(argv[0]);
+        return -1;
     }
+	if (rtm_type == rtm_sis8900) {
+    	printf("This RTM type does not support temperature read-out\n");
+		return -1;
+	}
 
     sisuser = malloc(sizeof(sis8300drv_usr));
     sisuser->file = argv[1];
