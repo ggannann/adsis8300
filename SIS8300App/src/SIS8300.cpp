@@ -488,9 +488,6 @@ void SIS8300::setAcquire(int value)
     if (!value && acquiring_) {
         /* This was a command to stop acquisition */
         /* Send the stop event */
-
-    	disarmDevice();
-
         epicsEventSignal(this->stopEventId_); 
     }
 }
@@ -559,6 +556,8 @@ taskStart:
         if (!acquiring_) {
         	D(printf("2a Acquiring = %d..\n", acquiring_));
 
+        	disarmDevice();
+
         	callParamCallbacks(0);
             /* Release the lock while we wait for an event that says acquire has started, then lock again */
             asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
@@ -614,6 +613,12 @@ taskStart:
 		if (ret) {
 			/* Lock after the wait failed. */
 			this->lock();
+
+			/* It is not an error if user requested to abort the wait.. */
+			if (ret == status_irq_release) {
+				SIS8300_INF("No error");
+			}
+
 			acquiring_ = 0;
 			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
