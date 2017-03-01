@@ -138,6 +138,7 @@ int sis8300drv_open_device(sis8300drv_usr *sisuser) {
             break;
         case SIS8300_SIS8300L:
         case SIS8300_SIS8300L2:
+        case SIS8300_SIS8300KU:
             sisdevice->type = SIS8300_SIS8300L;
             sisdevice->mem_size = SIS8300_2GB_MEMORY;
             break;

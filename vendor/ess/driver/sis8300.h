@@ -22,8 +22,12 @@
 #define PCI_PRODUCT_SIS8300L        0x0019
 #endif
 
+#ifndef PCI_PRODUCT_SIS8300KU
+#define PCI_PRODUCT_SIS8300KU       0x0024
+#endif
+
 #define DRIVER_MAJOR                2
-#define DRIVER_MINOR                0
+#define DRIVER_MINOR                1
 
 #define SIS8300_USR_FILE(filp)      ((sis8300_usr *)(filp)->private_data)
 #define SIS8300_DEV_FILE(filp)      ((sis8300_dev *)SIS8300_USR_FILE(filp)->sisdevice)
