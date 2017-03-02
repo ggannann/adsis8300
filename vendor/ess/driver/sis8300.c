@@ -31,7 +31,7 @@ DEFINE_MUTEX(sis8300_devlist_lock);     /**< Lock that serializes access to the 
 
 
 MODULE_AUTHOR("SIS GmbH <info@struck.de>");
-MODULE_DESCRIPTION("SIS8300/SIS8300L/SIS8300KU uTCA.4 Digitizer");
+MODULE_DESCRIPTION("SIS8300/SIS8300L/SIS8300L2/SIS8300KU uTCA.4 Digitizer");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_SUPPORTED_DEVICE("sis8300");
 
@@ -215,7 +215,11 @@ static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
     
     /* XXX: Fix PCI class until Struck does not fix firmware (if ever). */
     if (pdev->class == 0x00ff0000) {
-        /* SIS8300 card is 'Signal processing controller' */
+        /* SIS8300/SIS8300L/SIS8300L2 card is 'Signal processing controller' */
+        pdev->class = 0x00118000;
+    }
+    if (pdev->class == 0x00070000) {
+        /* SIS8300KU card is 'Signal processing controller' */
         pdev->class = 0x00118000;
     }
     dev_dbg(&sisdevice->pdev->dev, "vendor/device id %04x/%04x, class %08X\n",
@@ -482,6 +486,8 @@ static int __init sis8300_module_init(void) {
             sis8300_drvclass_name, PCI_VENDOR_FZJZEL, PCI_PRODUCT_SIS8300);
     printk(KERN_INFO "%s:     vendor/device: %04x/%04x\n", 
             sis8300_drvclass_name, PCI_VENDOR_FZJZEL, PCI_PRODUCT_SIS8300L);
+    printk(KERN_INFO "%s:     vendor/device: %04x/%04x\n",
+            sis8300_drvclass_name, PCI_VENDOR_FZJZEL, PCI_PRODUCT_SIS8300KU);
     printk(KERN_INFO "%s: driver Version: v%d.%d (c)\n", 
             sis8300_drvclass_name, DRIVER_MAJOR, DRIVER_MINOR);
 
