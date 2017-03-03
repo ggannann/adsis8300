@@ -116,7 +116,7 @@ dbLoadRecords("$(MRFIOC2)/db/evr-softEvent.template", "DEVICE=$(DEVICE), SYS=$(S
 dbLoadRecords("$(MRFIOC2)/db/evr-pulserMap.template", "DEVICE=$(DEVICE), SYS=$(SYS), PID=0, F=Trig, ID=0, EVT=14")
 
 ## Load all other plugins using commonPlugins.cmd
-< $(ADCORE)/iocBoot/commonPlugins.cmd
+< $(SIS8300)/iocBoot/commonPlugins.cmd
 
 set_requestfile_path("$(SIS8300)/SIS8300App/Db")
 
