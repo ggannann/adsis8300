@@ -45,6 +45,7 @@
 #define SisRTMTemp1String              "SIS_RTM_TEMP1"
 #define SisRTMTemp2String              "SIS_RTM_TEMP2"
 #define SisHarlinkString               "SIS_HARLINK"
+#define SisUpdateParametersString      "SIS_UPDATE_PARAMETERS"
 
 #define MAX_PATH_LEN                   32
 #define MAX_LOG_STR_LEN                256
@@ -161,8 +162,9 @@ protected:
     int mSISRTMTemp1;
     int mSISRTMTemp2;
     int mSISHarlink;
+    int mSISUpdateParameters;
 
-    #define SIS8300_LAST_PARAM mSISHarlink
+    #define SIS8300_LAST_PARAM mSISUpdateParameters
 
     /* These are the methods that are new to this class */
     int acquireRawArrays();
@@ -179,6 +181,7 @@ protected:
     virtual int waitForDevice();
     virtual int deviceDone();
     virtual int updateParameters();
+    virtual int refreshParameters();
 
     sis8300drv_usr *mSisDevice;
     uint32_t mChannelMask;

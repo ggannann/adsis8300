@@ -385,6 +385,13 @@ record(longin, "$(P)$(R)Harlink_RBV")
     field(SCAN, "I/O Intr")
 }
 
+record(bo, "$(P)$(R)UpdateParameters")
+{
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_UPDATE_PARAMETERS")
+    field(ZNAM, "Update")
+    field(ONAM, "Update")
+}
 
 
 

@@ -140,6 +140,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisRTMTemp2String,            asynParamFloat64, &mSISRTMTemp2);
     createParam(SisRTMTempGetString,            asynParamInt32, &mSISRTMTempGet);
     createParam(SisHarlinkString,               asynParamInt32, &mSISHarlink);
+    createParam(SisUpdateParametersString,      asynParamInt32, &mSISUpdateParameters);
 
     status |= setIntegerParam(mSISNumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
@@ -320,6 +321,15 @@ int SIS8300::deviceDone()
 }
 
 int SIS8300::updateParameters()
+{
+	int ret = 0;
+
+	D(printf("Enter\n"));
+
+	return ret;
+}
+
+int SIS8300::refreshParameters()
 {
 	int ret = 0;
 
@@ -634,6 +644,13 @@ taskStart:
 			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
+
+       	ret = refreshParameters();
+		if (ret) {
+			acquiring_ = 0;
+			setIntegerParam(mSISAcquire, 0);
+			goto taskStart;
+		}
 		callParamCallbacks(0);
 
         /* Trigger arrived */
@@ -792,6 +809,16 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
    		ret = SIS8300DRV_CALL("sis8300drv_write_harlink", sis8300drv_write_harlink(mSisDevice, value));
 		if (ret) {
 			status = asynError;
+		}
+    } else if (function == mSISUpdateParameters) {
+    	ret = updateParameters();
+		if (ret) {
+			status = asynError;
+		} else {
+			ret = refreshParameters();
+			if (ret) {
+				status = asynError;
+			}
 		}
     } else {
         /* If this parameter belongs to a base class call its method */
