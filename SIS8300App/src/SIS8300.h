@@ -26,7 +26,6 @@
 #define SisClockDivString              "SIS_CLOCK_DIV"
 #define SisTrigSourceString            "SIS_TRIG_SOURCE"
 #define SisTrigLineString              "SIS_TRIG_LINE"
-#define SisTrigDoString                "SIS_TRIG_DO"
 #define SisTrigDelayString             "SIS_TRIG_DELAY"
 #define SisTrigRepeatString            "SIS_TRIG_REPEAT"
 #define SisChannelEnableString         "SIS_ENABLE"
@@ -142,7 +141,6 @@ protected:
     int mSISClockDiv;
     int mSISTrigSource;
     int mSISTrigLine;
-    int mSISTrigDo;
     int mSISTrigDelay;
     int mSISTrigRepeat;
     int mSISEnable;

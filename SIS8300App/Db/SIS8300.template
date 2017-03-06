@@ -247,15 +247,6 @@ record(mbbi, "$(P)$(R)TrigLine_RBV") {
     field(ELST, "BackPlane7")
 }
 
-record(bi, "$(P)$(R)TrigDo_RBV")
-{
-    field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_TRIG_DO")
-    field(ZNAM, "Idle")
-    field(ONAM, "Acquire")
-    field(SCAN, "I/O Intr")
-}
-
 record(longout, "$(P)$(R)TrigDelay")
 {
     field(PINI, "YES")

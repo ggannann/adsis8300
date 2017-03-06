@@ -120,7 +120,6 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisClockDivString,              asynParamInt32, &mSISClockDiv);
     createParam(SisTrigSourceString,            asynParamInt32, &mSISTrigSource);
     createParam(SisTrigLineString,              asynParamInt32, &mSISTrigLine);
-    createParam(SisTrigDoString,                asynParamInt32, &mSISTrigDo);
     createParam(SisTrigDelayString,             asynParamInt32, &mSISTrigDelay);
     createParam(SisTrigRepeatString,            asynParamInt32, &mSISTrigRepeat);
     createParam(SisChannelEnableString,         asynParamInt32, &mSISEnable);
@@ -322,11 +321,121 @@ int SIS8300::deviceDone()
 
 int SIS8300::updateParameters()
 {
-	int ret = 0;
+	int iVal;
+	double dVal;
+	bool changed;
+	unsigned int channelMask;
+	int RTMType;
 
 	D(printf("Enter\n"));
 
-	return ret;
+	getIntegerParam(mSISRTMType, &RTMType);
+
+	isParamValueNew(mSISClockSource, &changed);
+	if (changed) {
+	    getIntegerParam(mSISClockSource, &iVal);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)iVal));
+   		clearParamValueNew(mSISClockSource);
+	}
+
+	isParamValueNew(mSISClockDiv, &changed);
+	if (changed) {
+		getIntegerParam(mSISClockDiv, &iVal);
+		SIS8300DRV_CALL_RET("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)iVal));
+   		clearParamValueNew(mSISClockDiv);
+	}
+
+	isParamValueNew(mSISClockFreq, &changed);
+	if (changed) {
+	    getDoubleParam(mSISClockFreq, &dVal);
+		sis8300drv_clk_div clkdiv = 250000000.0 / dVal;
+		int clksrc;
+		getIntegerParam(mSISClockSource, &clksrc);
+		if ((sis8300drv_clk_src)clksrc != clk_src_internal) {
+			/* Use no clock divider if NOT running with internal clock! */
+			clkdiv = 1;
+		}
+		SIS8300DRV_CALL_RET("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
+   		clearParamValueNew(mSISClockFreq);
+   		/* Also update the clock divider parameter and mark as handled. */
+		setIntegerParam(mSISClockDiv, clkdiv);
+   		clearParamValueNew(mSISClockDiv);
+	}
+
+	isParamValueNew(mSISTrigSource, &changed);
+	if (changed) {
+	    getIntegerParam(mSISTrigSource, &iVal);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)iVal));
+   		clearParamValueNew(mSISTrigSource);
+	}
+
+	isParamValueNew(mSISTrigLine, &changed);
+	if (changed) {
+	    getIntegerParam(mSISTrigLine, &iVal);
+		sis8300drv_trg_ext trgext = trg_ext_harlink;
+		unsigned int trgmask = (1 << iVal);
+		if (iVal >= SIS8300DRV_NUM_FP_TRG) {
+			trgext = trg_ext_mlvds;
+			trgmask = (1 << (iVal - SIS8300DRV_NUM_FP_TRG));
+		}
+   		SIS8300DRV_CALL_RET("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
+   		clearParamValueNew(mSISTrigLine);
+	}
+
+	isParamValueNew(mSISTrigDelay, &changed);
+	if (changed) {
+	    getIntegerParam(mSISTrigDelay, &iVal);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, iVal));
+   		clearParamValueNew(mSISTrigDelay);
+	}
+
+	isParamValueNew(mSISNumAiSamples, &changed);
+	if (changed) {
+	    getIntegerParam(mSISNumAiSamples, &iVal);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, iVal));
+   		clearParamValueNew(mSISNumAiSamples);
+	}
+
+	channelMask = mChannelMask;
+	for (int addr = 0; addr < SIS8300_NUM_CHANNELS; addr++) {
+		isParamValueNew(addr, mSISEnable, &changed);
+		if (changed) {
+			getIntegerParam(addr, mSISEnable, &iVal);
+			if (iVal) {
+				enableChannel(addr);
+			} else {
+				disableChannel(addr);
+			}
+			clearParamValueNew(addr, mSISEnable);
+		}
+	}
+	if (channelMask != mChannelMask) {
+		SIS8300DRV_CALL_RET("sis8300drv_set_channel_mask", sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
+	}
+
+	isParamValueNew(mSISHarlink, &changed);
+	if (changed) {
+		/* This will reset the value since it can only be 1 or 0. */
+	    setIntegerParam(mSISHarlink, 0);
+   		SIS8300DRV_CALL_RET("sis8300drv_write_harlink", sis8300drv_write_harlink(mSisDevice, iVal));
+   		clearParamValueNew(mSISHarlink);
+	}
+
+	/* Only DWC8VM1 and DWC8300-LF have attenuators */
+	if (((sis8300drv_rtm)RTMType == rtm_dwc8vm1) ||
+			((sis8300drv_rtm)RTMType == rtm_dwc8300lf)) {
+		for (int addr = 0; addr < SIS8300_NUM_CHANNELS; addr++) {
+			isParamValueNew(addr, mSISAttenuation, &changed);
+			if (changed) {
+				getDoubleParam(addr, mSISAttenuation, &dVal);
+				iVal = (int)((dVal + 31.5) * 2);
+				SIS8300DRV_CALL_RET("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, iVal));
+				clearParamValueNew(addr, mSISAttenuation);
+			}
+		}
+	}
+
+	return 0;
 }
 
 int SIS8300::refreshParameters()
@@ -727,54 +836,6 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
     if (function == mSISAcquire) {
         setAcquire(value);
-    } else if (function == mSISClockSource) {
-   		ret = SIS8300DRV_CALL("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)value));
-   		if (ret) {
-   			status = asynError;
-    	}
-    } else if (function == mSISClockDiv) {
-		ret = SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)value));
-		if (ret) {
-			status = asynError;
-		}
-    } else if (function == mSISTrigSource) {
-   		ret = SIS8300DRV_CALL("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)value));
-		if (ret) {
-			status = asynError;
-		}
-    } else if (function == mSISTrigLine) {
-		sis8300drv_trg_ext trgext = trg_ext_harlink;
-		unsigned int trgmask = (1 << value);
-		if (value >= SIS8300DRV_NUM_FP_TRG) {
-			trgext = trg_ext_mlvds;
-			trgmask = (1 << (value - SIS8300DRV_NUM_FP_TRG));
-		}
-   		ret = SIS8300DRV_CALL("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
-		if (ret) {
-			status = asynError;
-		}
-    } else if (function == mSISTrigDelay) {
-   		ret = SIS8300DRV_CALL("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, value));
-		if (ret) {
-			status = asynError;
-		}
-    } else if (function == mSISTrigDo) {
-    	setAcquire(1);
-    } else if (function == mSISNumAiSamples) {
-   		ret = SIS8300DRV_CALL("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, value));
-		if (ret) {
-			status = asynError;
-		}
-    } else if (function == mSISEnable) {
-    	if (value) {
-    		enableChannel(addr);
-    	} else {
-    		disableChannel(addr);
-    	}
-   		ret = SIS8300DRV_CALL("sis8300drv_set_channel_mask", sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
-		if (ret) {
-			status = asynError;
-		}
     } else if (function == mSISReset) {
    		ret = SIS8300DRV_CALL("sis8300drv_master_reset", sis8300drv_master_reset(mSisDevice));
 		if (ret) {
@@ -804,11 +865,6 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 				status = asynError;
 			}
 			setDoubleParam(mSISRTMTemp2, temp);
-		}
-    } else if (function == mSISHarlink) {
-   		ret = SIS8300DRV_CALL("sis8300drv_write_harlink", sis8300drv_write_harlink(mSisDevice, value));
-		if (ret) {
-			status = asynError;
 		}
     } else if (function == mSISUpdateParameters) {
     	ret = updateParameters();
@@ -850,7 +906,6 @@ asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
     int function = pasynUser->reason;
     int addr;
-    int ret;
     asynStatus status = asynSuccess;
 
     getAddress(pasynUser, &addr);
@@ -860,38 +915,10 @@ asynStatus SIS8300::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
      * status at the end, but that's OK */
     status = setDoubleParam(addr, function, value);
 
-    if (function == mSISClockFreq) {
-		sis8300drv_clk_div clkdiv = 250000000.0 / value;
-		int clksrc;
-		status = getIntegerParam(mSISClockSource, &clksrc);
-		if ((status == asynSuccess) && ((sis8300drv_clk_src)clksrc != clk_src_internal)) {
-			/* Use no clock divider if NOT running with internal clock! */
-			clkdiv = 1;
-		}
-		ret = SIS8300DRV_CALL("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
-		if (ret) {
-			status = asynError;
-		} else {
-			status = setIntegerParam(mSISClockDiv, clkdiv);
-		}
-    } else if (function == mSISAttenuation) {
-		int RTMType = 0;
-		getIntegerParam(mSISRTMType, &RTMType);
-		/* Only DWC8VM1 and DWC8300-LF have attenuators */
-		if (((sis8300drv_rtm)RTMType == rtm_dwc8vm1) ||
-				((sis8300drv_rtm)RTMType == rtm_dwc8300lf)) {
-			int val = (int)((value + 31.5) * 2);
-			ret = SIS8300DRV_CALL("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, val));
-			if (ret) {
-				status = asynError;
-			}
-		}
-    } else {
-        /* If this parameter belongs to a base class call its method */
-        if (function < SIS8300_FIRST_PARAM) {
-        	status = asynNDArrayDriver::writeFloat64(pasynUser, value);
-        }
-    }
+	/* If this parameter belongs to a base class call its method */
+	if (function < SIS8300_FIRST_PARAM) {
+		status = asynNDArrayDriver::writeFloat64(pasynUser, value);
+	}
 
     /* Do callbacks so higher layers see any changes */
     callParamCallbacks(addr);
