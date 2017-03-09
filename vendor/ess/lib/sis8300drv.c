@@ -891,6 +891,12 @@ int sis8300drv_set_clock_divider(sis8300drv_usr *sisuser, sis8300drv_clk_div clk
 
     if (clk_div == SIS8300DRV_CLKDIV_MIN) {
         divider_bypass = SIS8300DRV_CLKDIV_BYPASS;
+        /* Force the divider registers to 0x00!
+         * Otherwise if we seem to be getting some clock / jitter (?) from the
+         * external source (eg. RTM_CLK01) even if nothing is connected to
+         * that input. Weird thing is that it only happens if clock divider
+         * registers are not set to 0x00 ?!*/
+        clk_div = 2;
     } 
 
     /* Formulas on how to calculate divider and duty cycle from ad9510 manual
