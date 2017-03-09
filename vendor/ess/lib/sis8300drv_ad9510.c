@@ -514,3 +514,32 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
     return status_success;
 }
 
+/* For AD9510 debugging purposes.. */
+int sis8300drv_ad9510_spi_dump(sis8300drv_dev *sisdevice,
+        unsigned *ch_divider_configuration_array,
+        unsigned ad9510_synch_cmd,
+        unsigned clock_source) {
+    int             status;
+    int reg;
+    unsigned int i;
+    uint32_t        ui32_reg_val;
+
+	printf("%s: clock source (0-MUXes, 1-RTM_CLK01): %d\n", __func__, clock_source);
+	printf("%s: ch_divider_configuration_array:\n", __func__);
+	for (i = 0; i < 8; i++) {
+		printf("%s: [%d] 0x%04X\n", __func__, i, ch_divider_configuration_array[i]);
+	}
+	printf("%s: AD9510 registers:\n", __func__);
+    for (reg = 0; reg < 0x5B; reg++) {
+		ui32_reg_val = AD9510_GENERATE_SPI_RW_CMD + AD9510_SPI_READ_CYCLE + (reg << 8);
+		SIS8300DRV_AD9510_SPI_WRITE(ui32_reg_val);
+
+		usleep(100);
+
+		ui32_reg_val = 0;
+		SIS8300DRV_AD9510_SPI_READ(&ui32_reg_val);
+		printf("%s: 0x%02X 0x%08X\n", __func__, reg, ui32_reg_val);
+    }
+
+	return status_success;
+}

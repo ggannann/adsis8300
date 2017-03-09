@@ -23,5 +23,9 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
         unsigned ad9510_synch_cmd,
         unsigned clock_source);
 
+int sis8300drv_ad9510_spi_dump(sis8300drv_dev *sisdevice,
+        unsigned *ch_divider_configuration_array,
+        unsigned ad9510_synch_cmd,
+        unsigned clock_source);
 
 #endif /* SIS8300DRV_AD9510_H_ */
