@@ -9,7 +9,6 @@
 #define SIS8300DRV_FLASH_H_
 
 
-#define SIS8300DRV_FLASH_SIZE       8388608 /**< 8MB */
 #define SIS8300DRV_FLASH_PAGESIZE   256     /**< 256B */
 #define SIS8300DRV_FLASH_BLOCKSIZE  65536   /**< 64kB */
 

@@ -593,8 +593,11 @@ int sis8300drv_flash_erase_block(sis8300drv_dev *sisdevice, unsigned offset) {
         return status;
     }
     
-    /* datasheet: block erase max: 1000ms */
-    return sis8300drv_flash_busy(sisdevice, 2000);
+    /* poll busy, for a maximum of 5 seconds
+     * - L/L2 datasheet: blockerase max: 1000ms
+     * - KU   datasheet: blockerase max: 2600ms
+     */
+    return sis8300drv_flash_busy(sisdevice, 5000);
 }
 
 
