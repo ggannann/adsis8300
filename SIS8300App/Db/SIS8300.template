@@ -121,26 +121,6 @@ record(mbbi, "$(P)$(R)ClockSource_RBV") {
     field(SXST, "RTM01")
 }
 
-record(ao, "$(P)$(R)ClockFreq")
-{
-    field(PINI, "YES")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_FREQ")
-    field(EGU,  "Hz")
-    field(PREC, "0")
-    field(VAL,  "125000000")
-    info(autosaveFields, "VAL")
-}
-
-record(ai, "$(P)$(R)ClockFreq_RBV")
-{
-    field(DTYP, "asynFloat64")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_CLOCK_FREQ")
-    field(EGU,  "Hz")
-    field(PREC, "0")
-    field(SCAN, "I/O Intr")
-}
-
 record(longout, "$(P)$(R)ClockDiv")
 {
     field(PINI, "YES")

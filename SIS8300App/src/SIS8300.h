@@ -22,7 +22,6 @@
 #define SisAcquireString               "SIS_ACQUIRE"
 #define SisNumAiSamplesString          "SIS_NUM_AI_SAMPLES"
 #define SisClockSourceString           "SIS_CLOCK_SOURCE"
-#define SisClockFreqString             "SIS_CLOCK_FREQ"
 #define SisClockDivString              "SIS_CLOCK_DIV"
 #define SisTrigSourceString            "SIS_TRIG_SOURCE"
 #define SisTrigLineString              "SIS_TRIG_LINE"
@@ -137,7 +136,6 @@ protected:
     #define SIS8300_FIRST_PARAM mSISAcquire
     int mSISNumAiSamples;
     int mSISClockSource;
-    int mSISClockFreq;
     int mSISClockDiv;
     int mSISTrigSource;
     int mSISTrigLine;

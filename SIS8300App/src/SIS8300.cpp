@@ -116,7 +116,6 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisAcquireString,               asynParamInt32, &mSISAcquire);
     createParam(SisNumAiSamplesString,          asynParamInt32, &mSISNumAiSamples);
     createParam(SisClockSourceString,           asynParamInt32, &mSISClockSource);
-    createParam(SisClockFreqString,           asynParamFloat64, &mSISClockFreq);
     createParam(SisClockDivString,              asynParamInt32, &mSISClockDiv);
     createParam(SisTrigSourceString,            asynParamInt32, &mSISTrigSource);
     createParam(SisTrigLineString,              asynParamInt32, &mSISTrigLine);
@@ -342,23 +341,6 @@ int SIS8300::updateParameters()
 	if (changed) {
 		getIntegerParam(mSISClockDiv, &iVal);
 		SIS8300DRV_CALL_RET("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)iVal));
-   		clearParamValueNew(mSISClockDiv);
-	}
-
-	isParamValueNew(mSISClockFreq, &changed);
-	if (changed) {
-	    getDoubleParam(mSISClockFreq, &dVal);
-		sis8300drv_clk_div clkdiv = 250000000.0 / dVal;
-		int clksrc;
-		getIntegerParam(mSISClockSource, &clksrc);
-		if ((sis8300drv_clk_src)clksrc != clk_src_internal) {
-			/* Use no clock divider if NOT running with internal clock! */
-			clkdiv = 1;
-		}
-		SIS8300DRV_CALL_RET("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, clkdiv));
-   		clearParamValueNew(mSISClockFreq);
-   		/* Also update the clock divider parameter and mark as handled. */
-		setIntegerParam(mSISClockDiv, clkdiv);
    		clearParamValueNew(mSISClockDiv);
 	}
 
