@@ -213,9 +213,12 @@ static int init_sis8300(struct pci_dev *pdev, const struct pci_device_id *ent) {
         dev_dbg(&sisdevice->pdev->dev, "device not in a PCIe slot\n");
     }
     
-    /* XXX: Fix PCI class until Struck does not fix firmware (if ever). */
-    if (pdev->class == 0x00ff0000) {
-        /* SIS8300/SIS8300L/SIS8300L2 card is 'Signal processing controller' */
+    /* XXX: Fix PCI class until Struck provides fixed firmware (if ever). */
+    if (pdev->class == 0x00078000) {
+        /* SIS8300 card is 'Signal processing controller' */
+        pdev->class = 0x00118000;
+    }    if (pdev->class == 0x00ff0000) {
+        /* SIS8300L/SIS8300L2 card is 'Signal processing controller' */
         pdev->class = 0x00118000;
     }
     if (pdev->class == 0x00070000) {
