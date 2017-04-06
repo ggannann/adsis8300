@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
                 printf("       -c 3                 External HARLINK clock \n");
                 printf("       -c 4                 Backplane clock A \n");
                 printf("       -c 5                 Backplane clock B \n");
+                printf("       -c 6                 External RTM clock 01 \n");
                 printf("   \n");
                 printf("       -d unsigned int      Clock divider (1-18, only even values, value 1 not applicable with internal clock) \n");
                 printf("   \n");
