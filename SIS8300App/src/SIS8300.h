@@ -36,6 +36,7 @@
 #define SisResetString                 "SIS_RESET"
 #define SisFwVersionString             "SIS_FW_VERSION"
 #define SisDeviceTypeString            "SIS_DEVICE_TYPE"
+#define SisDeviceTypeStrString         "SIS_DEVICE_TYPE_STR"
 #define SisSerialNumberString          "SIS_SERIAL_NUMBER"
 #define SisMemorySizeString            "SIS_MEMORY_SIZE"
 #define SisRTMTypeString               "SIS_RTM_TYPE"
@@ -152,6 +153,7 @@ protected:
     int mSISFwVersion;
     int mSISSerialNumber;
     int mSISDeviceType;
+    int mSISDeviceTypeStr;
     int mSISMemorySize;
     int mSISRTMType;
     int mSISRTMTempGet;

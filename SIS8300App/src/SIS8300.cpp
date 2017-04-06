@@ -133,6 +133,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisSerialNumberString,          asynParamInt32, &mSISSerialNumber);
     createParam(SisMemorySizeString,            asynParamInt32, &mSISMemorySize);
     createParam(SisDeviceTypeString,            asynParamInt32, &mSISDeviceType);
+    createParam(SisDeviceTypeStrString,         asynParamOctet, &mSISDeviceTypeStr);
     createParam(SisRTMTypeString,               asynParamInt32, &mSISRTMType);
     createParam(SisRTMTemp1String,            asynParamFloat64, &mSISRTMTemp1);
     createParam(SisRTMTemp2String,            asynParamFloat64, &mSISRTMTemp2);
@@ -147,6 +148,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     status |= setIntegerParam(mSISSerialNumber, 0);
     status |= setIntegerParam(mSISMemorySize, 0);
     status |= setIntegerParam(mSISDeviceType, 0);
+    status |= setStringParam(mSISDeviceTypeStr, "Unknown");
     status |= setIntegerParam(mSISRTMType, 0);
     status |= setDoubleParam(mSISRTMTemp1, 0);
     status |= setDoubleParam(mSISRTMTemp2, 0);
@@ -192,6 +194,7 @@ int SIS8300::initDevice()
     unsigned int firmwareVersion;
     unsigned long memorySizeMb;
     unsigned int serialNumber;
+    char deviceTypeStr[256];
     int ret;
 
     D(printf("Enter\n"));
@@ -228,10 +231,29 @@ int SIS8300::initDevice()
 	setIntegerParam(mSISSerialNumber, serialNumber);
 	setIntegerParam(mSISMemorySize, memorySizeMb);
 	setIntegerParam(mSISDeviceType, deviceType);
+	switch (deviceType) {
+	case SIS8300_SIS8300:
+		snprintf(deviceTypeStr, 256, "SIS8300");
+		break;
+	case SIS8300_SIS8300L:
+		snprintf(deviceTypeStr, 256, "SIS8300-L");
+		break;
+	case SIS8300_SIS8300L2:
+		snprintf(deviceTypeStr, 256, "SIS8300-L2");
+		break;
+	case SIS8300_SIS8300KU:
+		snprintf(deviceTypeStr, 256, "SIS8300-KU");
+		break;
+	default:
+		snprintf(deviceTypeStr, 256, "Unknown");
+		break;
+	}
+	setStringParam(mSISDeviceTypeStr, deviceTypeStr);
 	callParamCallbacks(0);
 
-	I(printf("Device is %X, serial no. %d, fw 0x%X, mem size %d MB\n",
+	I(printf("Device is %X (%s), serial no. %d, fw 0x%X, mem size %d MB\n",
 			deviceType,
+			deviceTypeStr,
 			serialNumber,
 			firmwareVersion,
 			(unsigned int)memorySizeMb));
@@ -417,6 +439,7 @@ int SIS8300::updateParameters()
 		}
 	}
 
+    SIS8300_INF("No error");
 	return 0;
 }
 
@@ -589,6 +612,7 @@ void SIS8300::setAcquire(int value)
     if (!value && acquiring_) {
         /* This was a command to stop acquisition */
         /* Send the stop event */
+    	disarmDevice();
         epicsEventSignal(this->stopEventId_); 
     }
 }

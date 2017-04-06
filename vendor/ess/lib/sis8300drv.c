@@ -172,14 +172,23 @@ int sis8300drv_is_device_open(sis8300drv_usr *sisuser) {
 }
 
 int sis8300drv_get_device_type(sis8300drv_usr *sisuser, unsigned int *device_type) {
+    int             status;
+    uint32_t        ui32_reg_val;
     sis8300drv_dev  *sisdevice;
 
     sisdevice = sisuser->device;
     if (!sisdevice) {
         return status_no_device;
     }
-	*device_type = sisdevice->type;
-	return status_success;
+
+    status = sis8300_reg_read(sisdevice->handle,
+            SIS8300_IDENTIFIER_VERSION_REG, &ui32_reg_val);
+    if (status) {
+        return status_device_access;
+    }
+    *device_type = (unsigned)(ui32_reg_val & 0xFFFF0000) >> 16;
+
+    return status_success;
 }
 
 int sis8300drv_get_memory_size(sis8300drv_usr *sisuser, unsigned long *memory_size) {

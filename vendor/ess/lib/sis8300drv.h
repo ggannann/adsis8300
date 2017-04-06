@@ -12,6 +12,15 @@ extern "C" {
 #endif
 
 
+/* Device model identifiers and memory sizes based on firmware options. */
+#define SIS8300_SIS8300             0x8300
+#define SIS8300_SIS8300L            0x8301
+#define SIS8300_SIS8300L2           0x8302
+#define SIS8300_SIS8300KU           0x8303
+#define SIS8300_2GB_MEMORY          0x80000000
+#define SIS8300_1GB_MEMORY          0x40000000
+#define SIS8300_512MB_MEMORY        0x20000000
+
 /* Device and DAQ related constants. */
 
 #define SIS8300DRV_INT_CLK_FREQ     250000000   /**< Internal clock frequency in Hz. */

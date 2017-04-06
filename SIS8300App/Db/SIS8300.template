@@ -14,6 +14,15 @@ record(longin, "$(P)$(R)DeviceType_RBV")
     field(SCAN, "I/O Intr")
 }
 
+record(waveform, "$(P)$(R)DeviceTypeStr_RBV")
+{
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DEVICE_TYPE_STR")
+    field(FTVL, "CHAR")
+    field(NELM, "256")
+    field(SCAN, "I/O Intr")
+}
+
 record(longin, "$(P)$(R)SerialNumber_RBV")
 {
     field(DTYP, "asynInt32")

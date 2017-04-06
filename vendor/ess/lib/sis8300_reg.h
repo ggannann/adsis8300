@@ -170,14 +170,4 @@
 
 #define FLASH_SPI_FLASH_BUSY        0x1
 
-
-/* Device model identifiers and memory sizes based on firmware oprions. */
-#define SIS8300_SIS8300             0x8300
-#define SIS8300_SIS8300L            0x8301
-#define SIS8300_SIS8300L2           0x8302
-#define SIS8300_SIS8300KU           0x8303
-#define SIS8300_2GB_MEMORY          0x80000000
-#define SIS8300_1GB_MEMORY          0x40000000
-#define SIS8300_512MB_MEMORY        0x20000000
-
 #endif /* SIS8300_REG_H_ */
