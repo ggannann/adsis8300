@@ -33,8 +33,8 @@ int main(int argc, char **argv) {
     int status, verbose, binary, iter;
     unsigned channel, average, min, max;
     FILE *datafile;
-    char datafile_base[FILENAME_BUFFER_SIZE];
-    char datafile_channel[FILENAME_BUFFER_SIZE];
+    char datafile_base[FILENAME_BUFFER_SIZE] = {0};
+    char datafile_channel[FILENAME_BUFFER_SIZE] = {0};
     uint16_t *data[SIS8300DRV_NUM_AI_CHANNELS];
     sis8300drv_usr *sisuser;
     sis8300drv_clk_src clksrc;
@@ -228,66 +228,39 @@ int main(int argc, char **argv) {
     
     printf("acquisition completed %fs\n", (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / (double) 1000000000);
     
-    if (!verbose && !strlen(datafile_base)) {
-        sis8300drv_close_device(sisuser);
-        return 0;
-    }
+//    if (!verbose && !strlen(datafile_base)) {
+//        sis8300drv_close_device(sisuser);
+//        return 0;
+//    }
     
     if (verbose) {
         printf("\n");
     }
 
-    for (channel = 0; channel < SIS8300DRV_NUM_AI_CHANNELS; channel++) {
+    double total = 0.0;
+    int ch = 0;
+    for (channel = 0; channel < 28; channel++) {
         
-        data[channel] = (uint16_t *)calloc(nsamples, sizeof(uint16_t));
-        if (!(channel_mask & (1 << channel))) {
+    	ch = channel % SIS8300DRV_NUM_AI_CHANNELS;
+        data[ch] = (uint16_t *)calloc(nsamples, sizeof(uint16_t));
+        if (!(channel_mask & (1 << ch))) {
             continue;
         }
         
-        status = sis8300drv_read_ai(sisuser, channel, data[channel]);
+        clock_gettime(CLOCK_REALTIME, &start);
+        status = sis8300drv_read_ai(sisuser, ch, data[ch]);
         if (status) {
             printf("sis8300drv_read_ai for channel %u error: %s (%d)\n", 
-                    channel, sis8300drv_strerror(status), status);
+                    ch, sis8300drv_strerror(status), status);
             return -1;
         }
-        
-        if (strlen(datafile_base)) {
-            sprintf(datafile_channel, "%s_%u.dat", datafile_base, channel);
-            datafile = fopen(datafile_channel, "wb+");
-            if (!datafile) {
-                printf("error: could not open/create file %s\n", datafile_channel);
-                return -1;
-            }
-            if (binary) {
-                fwrite(data[channel], sizeof(uint16_t), nsamples, datafile);
-            } else {
-                for (iter = 0; iter < nsamples; iter++) {
-                    fprintf(datafile, "%d\n", data[channel][iter]);
-                }
-            }
-            fclose(datafile);
-        }
-        
-        if (verbose) {
-            average = 0;
-            min = UINT16_MAX;
-            max = 0;
-            for (iter = 0; iter < nsamples; iter++) {
-                average += data[channel][iter];
-                if (data[channel][iter] < min) {
-                    min = data[channel][iter];
-                }
-                if (data[channel][iter] > max) {
-                    max = data[channel][iter];
-                }
-            }
-            average /= nsamples;
-            printf("Channel %u: average=%u min=%u max=%u\n", 
-                    channel, average, min, max);
-        }
-        
-        free(data[channel]);
+        clock_gettime(CLOCK_REALTIME, &end);
+        printf("read_ai[%d] completed %fs\n", channel, (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / (double) 1000000000);
+        total += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / (double) 1000000000;
+
+        free(data[ch]);
     }
+    printf("total read_ai completed %fs\n", total);
     
     if (verbose) {
         printf("\n");

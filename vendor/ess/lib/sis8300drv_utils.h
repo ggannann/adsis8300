@@ -15,6 +15,8 @@
 #define SIS8300DRV_NUM_ADCS             5       /**< Number of ADCs on the device. */
 #define SIS8300DRV_SAMPLE_BYTES         2       /**< Length of a sample in bytes. */
 #define SIS8300DRV_BLOCK_BYTES          32      /**< Length of a device memory block in bytes, 16 x 16 bits = 32 bytes. */
+//#define SIS8300DRV_SAMPLE_BYTES         4       /**< Length of a sample in bytes. */
+//#define SIS8300DRV_BLOCK_BYTES          64      /**< Length of a device memory block in bytes, 16 x 16 bits = 32 bytes. */
 #define SIS8300DRV_CH_SETUP_FIRST       0x100   /**< Register address of the "Trigger setup register" for the first channel. */
 #define SIS8300DRV_CH_THRESHOLD_FIRST   0x110   /**< Register address of the "Trigger threshold register" for the first channel. */
 #define SIS8300DRV_CH_ADDRESS_FIRST     0x120   /**< Register address of the "Memory sample start register" for the first channel. */

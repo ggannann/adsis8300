@@ -1803,6 +1803,7 @@ int sis8300drv_read_ai(sis8300drv_usr *sisuser, unsigned channel, void *data) {
         pthread_mutex_unlock(&sisdevice->lock);
         return status_device_access;
     }
+//    printf("read REG at 0x%08X, count 0x%08X\n", SIS8300DRV_CH_ADDRESS_FIRST + channel, ui32_reg_val);
     
     size = nsamples * SIS8300DRV_SAMPLE_BYTES;
     offset = (unsigned)ui32_reg_val * SIS8300DRV_BLOCK_BYTES;

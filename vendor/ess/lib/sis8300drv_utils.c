@@ -197,7 +197,8 @@ int sis8300drv_read_ram_unlocked(sis8300drv_dev *sisdevice, unsigned offset, uns
     if (size % SIS8300DRV_BLOCK_BYTES || offset % SIS8300DRV_BLOCK_BYTES) {
         return status_argument_invalid;
     }
-     
+
+//    printf("read RAM at 0x%08X, size 0x%08X\n", offset, size);
     status = lseek(sisdevice->handle, offset, SEEK_SET);
     if (status < 0) {
         return status_device_access;

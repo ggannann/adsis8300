@@ -1,20 +1,19 @@
-TOP=../../..
+TOP=../../../..
 include $(TOP)/configure/CONFIG
 #----------------------------------------
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
 
-DIRS += register
-DIRS += acquisition
-DIRS += flash
-DIRS += i2c_rtm
-DIRS += i2c_temp
-DIRS += memory
-DIRS += speed
-DIRS += performance
-DIRS += threads
+PROD_NAME = sis8300drv_threads
+PROD_IOC += $(PROD_NAME)
+PROD_SRCS += sis8300drv_threads.c
 
-include $(TOP)/configure/RULES_DIRS
+PROD_SYS_LIBS += rt m udev pthread
+
+PROD_LIBS += sis8300drv
+
+        
+include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
 

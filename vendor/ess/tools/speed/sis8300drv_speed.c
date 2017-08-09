@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
     sis8300drv_usr *sisuser;
     sis8300drv_dev *sisdevice;
     
-    bsize = 0x400000;
+    bsize = 0x100000;
     nbytes = 1;
     nreads = 1;
     zflag = 0;
@@ -165,8 +165,9 @@ int main(int argc, char **argv) {
     avg /= nreads;
     sig = sqrt(sig/nreads - avg*avg);
     
-    printf("Read speed %lf MB/s +- %lf\n", avg, sig);
-    
+    double timech = (end - start)/nreads;
+    printf("Read %lf MB, time %lf, speed %lf MB/s +- %lf\n", nbytes / 1e6, timech, avg, sig);
+
     if (zflag) {
         munmap((void *)data, nbytes);
     }
