@@ -203,9 +203,10 @@ int main(int argc, char **argv) {
     }
 
     if (trgsrc == trg_src_external) {
+        trgmask = (1 << trgline);
         if (trgline >= SIS8300DRV_NUM_FP_TRG) {
             trgext = trg_ext_mlvds;
-            trgline -= SIS8300DRV_NUM_FP_TRG;
+            trgmask = (1 << (trgline - SIS8300DRV_NUM_FP_TRG));
         }
         status = sis8300drv_set_external_setup(sisuser, trgext, trgmask, 0);
         if (status) {
