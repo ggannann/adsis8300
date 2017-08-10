@@ -143,6 +143,7 @@ int sis8300_reg_read(int handle, uint32_t address, uint32_t *data) {
     sis8300_reg    uint32_reg;
     int            ret;
 
+    uint32_reg.data = 0;
     uint32_reg.offset = address;
     ret = ioctl(handle, SIS8300_REG_READ, &uint32_reg);
     *data = uint32_reg.data;
