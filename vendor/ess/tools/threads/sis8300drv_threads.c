@@ -45,6 +45,8 @@ struct arg {
 	double scale_offset;
 	double scale_factor;
 	double td;
+	int loop;
+	unsigned int daq_intr;
 
 	sis8300drv_usr *sisuser;
 
@@ -57,7 +59,7 @@ struct arg {
 	unsigned int nbytes;
 };
 
-#define ROUNDUP_HEX(val) (((unsigned)(val) + 0xF) & ~0xF)
+#define ROUNDUP_HEX(val) (((unsigned int)(val) + 0xF) & ~0xF)
 
 struct Qmn {
 	unsigned int int_bits_m; /** < Number of integer bits (sign bit inclusive) */
@@ -81,22 +83,6 @@ void mn_2_double(uint32_t val, struct Qmn Qmn, double *converted) {
 	}
 
 	/* convert to double */
-	*converted /= pow_2_frac_bits;
-}
-
-void mn_2_float(uint32_t val, struct Qmn Qmn, float *converted) {
-
-	float pow_2_frac_bits = (float) (0x1UL << Qmn.frac_bits_n);
-	float pow_2_frac_bits_int_bits = (float) (0x1UL << (Qmn.int_bits_m + Qmn.frac_bits_n));
-
-	*converted = (float) val;
-
-	/* check if val is signed and if it is negative */
-	if (Qmn.is_signed && (*converted > (pow_2_frac_bits_int_bits / 2.0 - 1.0))) {
-		*converted -= pow_2_frac_bits_int_bits;
-	}
-
-	/* convert to float */
 	*converted /= pow_2_frac_bits;
 }
 
@@ -235,6 +221,7 @@ int func_smn2double(struct arg *a) {
 	for (i = 0; i < a->nreads; ++i) {
 		for (j = 0; j < a->nsamples; j++) {
 			mn_2_double(a->data_raw[j], mn_phase, (double *)&a->data[j]);
+			a->data[j] *= 180.0 / M_PI;
 		}
 	}
 	a->end = time_msec();
@@ -250,36 +237,6 @@ int func_umn2double(struct arg *a) {
 	for (i = 0; i < a->nreads; ++i) {
 		for (j = 0; j < a->nsamples; j++) {
 			mn_2_double(a->data_raw[j], mn_magnitude, (double *)&a->data[j]);
-		}
-	}
-	a->end = time_msec();
-
-	print_stats(a, __func__);
-	return 0;
-}
-
-int func_smn2float(struct arg *a) {
-	int i, j;
-
-	a->start = time_msec();
-	for (i = 0; i < a->nreads; ++i) {
-		for (j = 0; j < a->nsamples; j++) {
-			mn_2_float(a->data_raw[j], mn_phase, (float *)&a->data[j]);
-		}
-	}
-	a->end = time_msec();
-
-	print_stats(a, __func__);
-	return 0;
-}
-
-int func_umn2float(struct arg *a) {
-	int i, j;
-
-	a->start = time_msec();
-	for (i = 0; i < a->nreads; ++i) {
-		for (j = 0; j < a->nsamples; j++) {
-			mn_2_float(a->data_raw[j], mn_magnitude, (float *)&a->data[j]);
 		}
 	}
 	a->end = time_msec();
@@ -309,6 +266,10 @@ void *run_func(void *ptr) {
 	struct arg *a = (struct arg *) ptr;
 	int ret;
 	sis8300drv_dev *sisdevice;
+    sis8300drv_trg_src trgsrc = trg_src_external;
+    sis8300drv_trg_ext trgext = trg_ext_mlvds;
+    unsigned int trgline = 4;
+    unsigned int trgmask = (1 << (trgline - SIS8300DRV_NUM_FP_TRG));
 
 	a->sisuser = malloc(sizeof(sis8300drv_usr));
 	a->sisuser->file = a->dev;
@@ -319,6 +280,46 @@ void *run_func(void *ptr) {
 		return NULL;
 	}
 	sisdevice = (sis8300drv_dev *)a->sisuser->device;
+
+	/* enable all 10 channels */
+	ret = sis8300drv_set_channel_mask(a->sisuser, 0x3FF);
+	if (ret) {
+		printf("sis8300drv_set_channel_mask error: %s (%d)\n",
+				sis8300drv_strerror(ret), ret);
+		return NULL;
+	}
+
+	/* internal clock */
+	ret = sis8300drv_set_clock_source(a->sisuser, 0);
+	if (ret) {
+		printf("sis8300drv_set_clock_source error: %s (%d)\n",
+				sis8300drv_strerror(ret), ret);
+		return NULL;
+	}
+
+	/* divide by 3 ~ 83.3 MHz */
+	ret = sis8300drv_set_clock_divider(a->sisuser, 3);
+	if (ret) {
+		printf("sis8300drv_set_clock_divider error: %s (%d)\n",
+				sis8300drv_strerror(ret), ret);
+		return NULL;
+	}
+
+	/* external trigger */
+	ret = sis8300drv_set_trigger_source(a->sisuser, trgsrc);
+	if (ret) {
+		printf("sis8300drv_set_trigger_source error: %s (%d)\n",
+				sis8300drv_strerror(ret), ret);
+		return NULL;
+	}
+
+	/* backplane 0 */
+	ret = sis8300drv_set_external_setup(a->sisuser, trgext, trgmask, 0);
+	if (ret) {
+		printf("sis8300drv_set_external_setup error: %s (%d)\n",
+				sis8300drv_strerror(ret), ret);
+		return NULL;
+	}
 
 	switch (a->acc) {
 	case 0:
@@ -349,70 +350,86 @@ void *run_func(void *ptr) {
 	    }
 	}
 
-	switch (a->func) {
-	case 0:
-		func_readout(a);
-		break;
-	case 1:
-		func_readout(a);
-		func_decsca(a);
-		break;
-	case 2:
-		func_readout(a);
-		func_dec(a);
-		break;
-	case 3:
-		func_readout(a);
-		func_sca(a);
-		break;
-	case 4:
-		func_readout(a);
-		func_no_decsca(a);
-		break;
-	case 5:
-		func_readout(a);
-		func_umn2double(a);
-		break;
-	case 6:
-		func_readout(a);
-		func_smn2double(a);
-		break;
-	case 7:
-		func_readout(a);
-		func_umn2float(a);
-		break;
-	case 8:
-		func_readout(a);
-		func_smn2float(a);
-		break;
+	do {
+		if (a->loop > 0) {
+		    sis8300drv_arm_device(a->sisuser);
 
-	case 99:
-		func_readout(a);
-		func_decsca(a);
-		func_dec(a);
-		func_sca(a);
-		func_no_decsca(a);
-		func_smn2double(a);
-		func_umn2double(a);
-		func_smn2float(a);
-		func_umn2float(a);
-		break;
+		    if (a->daq_intr) {
+		    	/* This does not poll register 0x10 - no CPU load!! */
+		    	ret = sis8300drv_wait_acq_end(a->sisuser, 1000);
+			    if (ret) {
+			        printf("sis8300drv_wait_acq_end error: %d\n", ret);
+			        return NULL;
+			    }
+		    } else {
+		    	/* This polls register 0x10 for ~70 ms - lots of CPU load!! */
+		    	ret = sis8300drv_poll_acq_end(a->sisuser);
+			    if (ret) {
+			        printf("sis8300drv_poll_acq_end error: %d\n", ret);
+			        return NULL;
+			    }
+		    }
+		}
 
-	case 100:
-		func_writepatt(a);
-		break;
+		switch (a->func) {
+		case 0:
+			func_readout(a);
+			break;
+		case 1:
+			func_readout(a);
+			func_decsca(a);
+			break;
+		case 2:
+			func_readout(a);
+			func_dec(a);
+			break;
+		case 3:
+			func_readout(a);
+			func_sca(a);
+			break;
+		case 4:
+			func_readout(a);
+			func_no_decsca(a);
+			break;
+		case 5:
+			func_readout(a);
+			func_umn2double(a);
+			break;
+		case 6:
+			func_readout(a);
+			func_smn2double(a);
+			break;
 
-	default:
-		printf("Invalid function %d\n", a->func);
-		break;
-	}
+		case 99:
+			func_readout(a);
+			func_decsca(a);
+			func_dec(a);
+			func_sca(a);
+			func_no_decsca(a);
+			func_smn2double(a);
+			func_umn2double(a);
+			break;
+
+		case 100:
+			func_writepatt(a);
+			break;
+
+		default:
+			printf("Invalid function %d\n", a->func);
+			a->loop = 0;
+			break;
+		}
+		a->loop--;
+	} while (a->loop > 0);
 
 	switch (a->acc) {
 	case 0:
 		free((void *) a->data_raw);
+		a->data_raw = NULL;
 		break;
 	case 1:
 	    munmap((void *)a->data_raw, a->nbytes_raw);
+		a->data_raw = NULL;
 	    break;
 	default:
 		printf("Invalid access mode %d\n", a->func);
@@ -422,6 +439,7 @@ void *run_func(void *ptr) {
 
 	if (a->data) {
 		free((void *) a->data);
+		a->data = NULL;
 	}
 
 	sis8300drv_close_device(a->sisuser);
@@ -433,14 +451,16 @@ void *run_func(void *ptr) {
 
 int main(int argc, char **argv) {
 	struct arg a[10];
-	int ret, i;
+	int ret, i, o;
 	char c;
 	unsigned int nreads, nsamples, dec_offset, dec_factor, nbytes, nbytes_raw;
 	double scale_offset, scale_factor;
-	unsigned int func, acc;
+	unsigned int func, acc, daq_intr;
+	int loop;
 	long double aa[4], bb[4], loadavg;
 	FILE *fp;
 
+	memset(a, 0, sizeof(a));
 	func = 0;
 	acc = 0;
 	nreads = 1;
@@ -448,9 +468,11 @@ int main(int argc, char **argv) {
 	dec_factor = 1;
 	scale_offset = 0;
 	scale_factor = 1;
+	loop = 0;
+	daq_intr = 0;
 	nsamples = 0x100000;
 
-	while ((c = getopt(argc, argv, "hA:B:S:N:o:f:O:F:")) != -1) {
+	while ((c = getopt(argc, argv, "hA:B:S:N:o:f:O:F:l:i")) != -1) {
 		switch (c) {
 		case 'A':
 			sscanf(optarg, "%u", &func);
@@ -476,6 +498,12 @@ int main(int argc, char **argv) {
 		case 'F':
 			sscanf(optarg, "%lf", &scale_factor);
 			break;
+		case 'l':
+			sscanf(optarg, "%u", &loop);
+			break;
+		case 'i':
+			daq_intr = 1;
+			break;
 		case ':':
 			printf("Option -%c requires an operand.\n", optopt);
 			break;
@@ -493,6 +521,8 @@ int main(int argc, char **argv) {
 			" -f unsigned int      Decimation factor (default: 1)\n"
 			" -O double            Scale offset (default: 0)\n"
 			" -F double            Scale factor (default: 1)\n"
+			" -l unsigned int      Loop on external trigger (default: 0)\n"
+			" -i                   Use DAQ interrupt (default: 0)\n"
 			" -B unsigned int      Access mode read() or mmap() (default: 0)\n"
 			" -A unsigned int      Which function to perform (default: 0)\n\n"
 			"FUNCTIONS\n"
@@ -503,8 +533,6 @@ int main(int argc, char **argv) {
 			" 4                    Readout, no decimation, no scaling\n"
 			" 5                    Readout, 2'complement unsigned to double\n"
 			" 6                    Readout, 2'complement signed to double\n"
-			" 7                    Readout, 2'complement unsigned to float\n"
-			" 8                    Readout, 2'complement signed to float\n"
 			" 99                   All of the above\n"
 			" 100                  Write pattern to memory\n"
 			"\n", argv[0]);
@@ -527,6 +555,8 @@ int main(int argc, char **argv) {
 			" dec_factor      %d\n"
 			" scale_offset    %lf\n"
 			" scale_factor    %lf\n"
+			" loop            %d\n"
+			" daq_intr        %d\n"
 			" ndevices        %d\n"
 			"\n",
 			func, acc,
@@ -536,6 +566,7 @@ int main(int argc, char **argv) {
 			nreads,
 			dec_offset, dec_factor,
 			scale_offset, scale_factor,
+			loop, daq_intr,
 			argc - optind);
 
 	fp = fopen("/proc/stat", "r");
@@ -544,23 +575,25 @@ int main(int argc, char **argv) {
 
 	print_stats_hdr();
 
-	memset(a, 0, sizeof(a));
 	double td = time_msec();
 	for (i = optind; i < argc; i++) {
-		sprintf(a[i].dev, "%s", argv[i]);
-		a[i].func = func;
-		a[i].acc = acc;
-		a[i].nsamples = nsamples;
-		a[i].nreads = nreads;
-		a[i].nbytes_raw = nbytes_raw;
-		a[i].nbytes = nbytes;
-		a[i].dec_offset = dec_offset;
-		a[i].dec_factor = dec_factor;
-		a[i].scale_offset = scale_offset;
-		a[i].scale_factor = scale_factor;
-		a[i].td = td;
+		o = i - optind;
+		sprintf(a[o].dev, "%s", argv[i]);
+		a[o].func = func;
+		a[o].acc = acc;
+		a[o].loop = loop;
+		a[o].daq_intr = daq_intr;
+		a[o].nsamples = nsamples;
+		a[o].nreads = nreads;
+		a[o].nbytes_raw = nbytes_raw;
+		a[o].nbytes = nbytes;
+		a[o].dec_offset = dec_offset;
+		a[o].dec_factor = dec_factor;
+		a[o].scale_offset = scale_offset;
+		a[o].scale_factor = scale_factor;
+		a[o].td = td;
 
-		ret = pthread_create(&a[i].tid, NULL, run_func, (void *) &a[i]);
+		ret = pthread_create(&a[o].tid, NULL, run_func, (void *) &a[o]);
 		if (ret) {
 			printf("failed pthread_create(): %d - %s\n", errno, strerror(errno));
 			exit(EXIT_FAILURE);
@@ -568,7 +601,8 @@ int main(int argc, char **argv) {
 	}
 
 	for (i = optind; i < argc; i++) {
-		pthread_join(a[i].tid, NULL);
+		o = i - optind;
+		pthread_join(a[o].tid, NULL);
 	}
 
 	fp = fopen("/proc/stat", "r");
@@ -576,7 +610,7 @@ int main(int argc, char **argv) {
 	fclose(fp);
 	loadavg = ((bb[0]+bb[1]+bb[2]) - (aa[0]+aa[1]+aa[2]))
 			/ ((bb[0]+bb[1]+bb[2]+bb[3]) - (aa[0]+aa[1]+aa[2]+aa[3]));
-	printf("CPU utilization was : %Lf\n",loadavg);
+	printf("CPU utilization was : %Lf (%.1Lf %%)\n", loadavg, loadavg*4*100.0);
 
 	printf("\nall threads ended..\n");
 	exit(EXIT_SUCCESS);
