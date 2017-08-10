@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     sis8300drv_trg_src trgsrc;
     sis8300drv_trg_ext trgext;
 
-    unsigned trgline, trgmask, nsamples, npretrig, channel_mask;
+    unsigned trgline, trgmask, nsamples, npretrig, channel_mask, intr_wait;
 
     struct timespec start, end;
 
@@ -57,8 +57,9 @@ int main(int argc, char **argv) {
     trgext = trg_ext_harlink;
     trgline = 0;
     trgmask = 0;
+    intr_wait = 0;
     
-    while ((c = getopt(argc, argv, "hvba:n:p:t:l:c:d:f:")) != -1) {
+    while ((c = getopt(argc, argv, "hvba:n:p:t:l:c:d:f:i")) != -1) {
         switch (c) {
             case 'a':
                 sscanf(optarg, "%x", &channel_mask);
@@ -90,17 +91,21 @@ int main(int argc, char **argv) {
             case 'v':
                 verbose = 1;
                 break;
+            case 'i':
+                intr_wait = 1;
+                break;
             case ':':
                 printf("Option -%c requires an operand.\n\n", optopt);
                 break;
             case '?':
             case 'h':
             default:
-                printf("Usage: %s device [-h] [-v] [-b] [-a chmask] [-n nsamples] [-p npretrig] [-t trgsrc] [-l trgline] [-c clksrc] [-d clkdiv] [-f datafile]\n", argv[0]);
+                printf("Usage: %s device [-h] [-v] [-b] [-i] [-a chmask] [-n nsamples] [-p npretrig] [-t trgsrc] [-l trgline] [-c clksrc] [-d clkdiv] [-f datafile]\n", argv[0]);
                 printf("   \n");
                 printf("       -a unsigned int      Channel enable mask in HEX (default: 3ff - all ten channels) \n");
                 printf("       -n unsigned int      Number of samples (default: 256) \n");
                 printf("       -p unsigned int      Number of pretrigger samples (default: 0, max: 2046) \n");
+                printf("       -i                   Wait for DAQ interrupt instead of polling (default: poll) \n");
                 printf("   \n");
                 printf("       -t 0                 Software trigger \n");
                 printf("       -t 1                 External trigger \n");
@@ -134,6 +139,7 @@ int main(int argc, char **argv) {
     
     if (verbose) {
         printf("\nStarting acquisition on %s with:\n\n", argv[optind]);
+        printf("Wait for DAQ interrupt          %d\n", intr_wait);
         printf("Channel enable mask             %x\n", channel_mask);
         printf("Number of samples               %u\n", nsamples);
         printf("Number of pretrigger samples    %u\n", npretrig);
@@ -219,7 +225,11 @@ int main(int argc, char **argv) {
     clock_gettime(CLOCK_REALTIME, &start);
     sis8300drv_arm_device(sisuser);
 
-    status = sis8300drv_wait_acq_end(sisuser);
+    if (intr_wait) {
+    	status = sis8300drv_wait_acq_end(sisuser, 0);
+    } else {
+    	status = sis8300drv_poll_acq_end(sisuser);
+    }
     clock_gettime(CLOCK_REALTIME, &end);
     if (status) {
         printf("sis8300drv_wait_acq_end error: %s (%d)\n", 

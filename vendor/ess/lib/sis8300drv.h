@@ -212,9 +212,11 @@ int sis8300drv_open_device(sis8300drv_usr *sisuser);
 
 int sis8300drv_is_device_open(sis8300drv_usr *sisuser);
 
-int sis8300drv_get_device_type(sis8300drv_usr *sisuser, unsigned int *device_type);
+int sis8300drv_get_device_type(sis8300drv_usr *sisuser,
+        unsigned int *device_type);
 
-int sis8300drv_get_memory_size(sis8300drv_usr *sisuser, unsigned long *memory_size);
+int sis8300drv_get_memory_size(sis8300drv_usr *sisuser,
+        unsigned long *memory_size);
 
 int sis8300drv_close_device(sis8300drv_usr *sisuser);
 
@@ -228,7 +230,10 @@ int sis8300drv_arm_device(sis8300drv_usr *sisuser);
 
 int sis8300drv_disarm_device(sis8300drv_usr *sisuser);
 
-int sis8300drv_wait_acq_end(sis8300drv_usr *sisuser);
+int sis8300drv_poll_acq_end(sis8300drv_usr *sisuser);
+
+int sis8300drv_wait_acq_end(sis8300drv_usr *sisuser,
+        unsigned timeout);
 
 int sis8300drv_wait_remove(sis8300drv_usr *sisuser);
 

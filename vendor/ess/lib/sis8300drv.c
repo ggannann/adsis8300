@@ -1588,8 +1588,11 @@ int sis8300drv_wait_remove(sis8300drv_usr *sisuser) {
  * requested that the device should be unarmed in which case it stops.
  * The device is marked as disarmed even if the function fails in communicating
  * with the device.
+ *
+ * Note that this wastes a lot of CPU cycles and noticeably cripples the
+ * performance!
  */
-int sis8300drv_wait_acq_end(sis8300drv_usr *sisuser) {
+int sis8300drv_poll_acq_end(sis8300drv_usr *sisuser) {
     int             status;
     uint32_t        ui32_reg_val;
     sis8300drv_dev  *sisdevice;
@@ -1610,6 +1613,37 @@ int sis8300drv_wait_acq_end(sis8300drv_usr *sisuser) {
     return status < 0 ? status_device_access : status_success;
 }
 
+/**
+ * @brief wait for DAQ end interrupt
+ *
+ * @param [in]  sisuser     User context struct
+ * @param [in]  timeout     Wait irq timeout
+ *
+ * @return status_no_device     Device not opened
+ * @return @see #sis8300drv_wait_irq
+ *
+ * The function will wait for the board to fire a DAQ end interrupt,
+ * indicating that data is ready for readout.
+ *
+ * This is preferred way of waiting for end of DAQ as opposed to
+ * #sis8300drv_poll_acq_end. Performance is considerably improved since there
+ * are no CPU cycles wasted for polling the register.
+ */
+int sis8300drv_wait_acq_end(sis8300drv_usr *sisuser, unsigned timeout) {
+    int             status;
+    sis8300drv_dev  *sisdevice;
+
+    sisdevice = sisuser->device;
+    if (!sisdevice) {
+        return status_no_device;
+    }
+
+    status = sis8300drv_wait_irq(sisuser, irq_type_daq, timeout);
+
+    __sync_lock_release(&sisdevice->armed);
+
+    return status;;
+}
 
 /**
  * @brief Wait until a "daq-done" or "user defined interrupt" happens.
