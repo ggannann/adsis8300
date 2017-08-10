@@ -316,6 +316,7 @@ int SIS8300::disarmDevice()
 //		return ret;
 	}
 	ret = SIS8300DRV_CALL("sis8300drv_release_irq", sis8300drv_release_irq(mSisDevice, irq_type_usr));
+	ret = SIS8300DRV_CALL("sis8300drv_release_irq", sis8300drv_release_irq(mSisDevice, irq_type_daq));
 
 	return ret;
 }
@@ -326,7 +327,10 @@ int SIS8300::waitForDevice()
 
 	D(printf("Enter\n"));
 
-   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice));
+	/* this will poll for DAQ end */
+//   	ret = SIS8300DRV_CALL("sis8300drv_poll_acq_end", sis8300drv_poll_acq_end(mSisDevice));
+	/* This will wait for DAQ interrupt */
+   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice, 0));
 
 	return ret;
 }
