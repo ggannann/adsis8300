@@ -277,7 +277,7 @@ void *run_func(void *ptr) {
 	ret = sis8300drv_open_device(a->sisuser);
 	if (ret) {
 		printf("sis8300drv_open_device error: %d\n", ret);
-		return NULL;
+		goto bailout;
 	}
 	sisdevice = (sis8300drv_dev *)a->sisuser->device;
 
@@ -286,7 +286,7 @@ void *run_func(void *ptr) {
 	if (ret) {
 		printf("sis8300drv_set_channel_mask error: %s (%d)\n",
 				sis8300drv_strerror(ret), ret);
-		return NULL;
+		goto bailout;
 	}
 
 	/* internal clock */
@@ -294,7 +294,7 @@ void *run_func(void *ptr) {
 	if (ret) {
 		printf("sis8300drv_set_clock_source error: %s (%d)\n",
 				sis8300drv_strerror(ret), ret);
-		return NULL;
+		goto bailout;
 	}
 
 	/* divide by 3 ~ 83.3 MHz */
@@ -302,7 +302,7 @@ void *run_func(void *ptr) {
 	if (ret) {
 		printf("sis8300drv_set_clock_divider error: %s (%d)\n",
 				sis8300drv_strerror(ret), ret);
-		return NULL;
+		goto bailout;
 	}
 
 	/* external trigger */
@@ -310,7 +310,7 @@ void *run_func(void *ptr) {
 	if (ret) {
 		printf("sis8300drv_set_trigger_source error: %s (%d)\n",
 				sis8300drv_strerror(ret), ret);
-		return NULL;
+		goto bailout;
 	}
 
 	/* backplane 0 */
@@ -318,7 +318,7 @@ void *run_func(void *ptr) {
 	if (ret) {
 		printf("sis8300drv_set_external_setup error: %s (%d)\n",
 				sis8300drv_strerror(ret), ret);
-		return NULL;
+		goto bailout;
 	}
 
 	switch (a->acc) {
@@ -326,19 +326,20 @@ void *run_func(void *ptr) {
 		a->data_raw = (uint16_t *) malloc(a->nbytes_raw);
 	    if (a->data_raw == NULL) {
 	    	printf("failed data_raw malloc(): %d - %s\n", errno, strerror(errno));
-	        return NULL;
+	    	goto bailout;
 	    }
 		break;
 	case 1:
 	    a->data_raw = (uint16_t *)mmap(NULL, a->nbytes_raw, PROT_READ, MAP_SHARED, sisdevice->handle, 0);
 	    if (a->data_raw == MAP_FAILED) {
+	    	a->data_raw = NULL;
 	    	printf("failed mmap(): %d - %s\n", errno, strerror(errno));
-	        return NULL;
+	    	goto bailout;
 	    }
 	    break;
 	default:
 		printf("Invalid access mode %d\n", a->func);
-		return NULL;
+		goto bailout;
 		break;
 	}
 
@@ -346,7 +347,7 @@ void *run_func(void *ptr) {
 		a->data = (volatile float *) malloc(a->nbytes);
 	    if (a->data == NULL) {
 	    	printf("failed data malloc(): %d - %s\n", errno, strerror(errno));
-	        return NULL;
+	    	goto bailout;
 	    }
 	}
 
@@ -359,14 +360,14 @@ void *run_func(void *ptr) {
 		    	ret = sis8300drv_wait_acq_end(a->sisuser, 1000);
 			    if (ret) {
 			        printf("sis8300drv_wait_acq_end error: %d\n", ret);
-			        return NULL;
+			        goto bailout;
 			    }
 		    } else {
 		    	/* This polls register 0x10 for ~70 ms - lots of CPU load!! */
 		    	ret = sis8300drv_poll_acq_end(a->sisuser);
 			    if (ret) {
 			        printf("sis8300drv_poll_acq_end error: %d\n", ret);
-			        return NULL;
+			        goto bailout;
 			    }
 		    }
 		}
@@ -422,13 +423,18 @@ void *run_func(void *ptr) {
 		a->loop--;
 	} while (a->loop > 0);
 
+bailout:
 	switch (a->acc) {
 	case 0:
-		free((void *) a->data_raw);
+		if (a->data_raw) {
+			free((void *) a->data_raw);
+		}
 		a->data_raw = NULL;
 		break;
 	case 1:
-	    munmap((void *)a->data_raw, a->nbytes_raw);
+		if (a->data_raw) {
+			munmap((void *)a->data_raw, a->nbytes_raw);
+		}
 		a->data_raw = NULL;
 	    break;
 	default:
