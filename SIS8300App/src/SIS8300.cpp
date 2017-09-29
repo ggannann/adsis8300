@@ -330,7 +330,16 @@ int SIS8300::waitForDevice()
 	/* this will poll for DAQ end */
 //   	ret = SIS8300DRV_CALL("sis8300drv_poll_acq_end", sis8300drv_poll_acq_end(mSisDevice));
 	/* This will wait for DAQ interrupt */
-   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice, 0));
+   	ret = SIS8300DRV_CALL("sis8300drv_wait_acq_end", sis8300drv_wait_acq_end(mSisDevice, 0.5));
+
+	if (ret == status_irq_timeout) {
+		printf("%s IRQ timeout!!!!\n", __func__);
+		ret = SIS8300DRV_CALL("sis8300drv_poll_acq_end", sis8300drv_poll_acq_end(mSisDevice));
+		// DEBUG: stop acq anyway!
+		if (! ret) {
+			ret = status_irq_timeout;
+		}
+	}
 
 	return ret;
 }
@@ -443,7 +452,7 @@ int SIS8300::updateParameters()
 		}
 	}
 
-    SIS8300_INF("No error");
+    SIS8300_INF0("No error");
 	return 0;
 }
 
@@ -492,10 +501,10 @@ int SIS8300::acquireRawArrays()
 //		sprintf(fname, "/tmp/raw_%d.txt", aich);
 //		FILE *fp = fopen(fname, "w");
 		D(printf("CH %d [%d]: ", aich, numAiSamples));
-		for (i = 0; i < numAiSamples; i++) {
+//		for (i = 0; i < numAiSamples; i++) {
 //			printf("%u ", *(pChRaw + i));
 //		fprintf(fp, "%u\n", *(pChRaw + i));
-		}
+//		}
 		D0(printf("\n"));
 //		fclose(fp);
     }
@@ -512,7 +521,7 @@ template <typename epicsType> int SIS8300::convertArraysT()
     epicsUInt16 *pRaw, *pChRaw;
     int aich, i;
     double convFactor, convOffset;
-    
+
 	D(printf("Enter\n"));
 
     getIntegerParam(NDDataType, (int *)&dataType);
@@ -575,7 +584,7 @@ int SIS8300::acquireArrays()
     	return ret;
     }
 
-    getIntegerParam(NDDataType, &dataType); 
+    getIntegerParam(NDDataType, &dataType);
     switch (dataType) {
         case NDInt8:
             return convertArraysT<epicsInt8>();
@@ -611,13 +620,13 @@ void SIS8300::setAcquire(int value)
 {
     if (value && !acquiring_) {
         /* Send an event to wake up the simulation task */
-        epicsEventSignal(this->startEventId_); 
+        epicsEventSignal(this->startEventId_);
     }
     if (!value && acquiring_) {
         /* This was a command to stop acquisition */
         /* Send the stop event */
     	disarmDevice();
-        epicsEventSignal(this->stopEventId_); 
+        epicsEventSignal(this->stopEventId_);
     }
 }
 
@@ -628,14 +637,10 @@ void SIS8300::sisTask()
     int status = asynSuccess;
     NDArray *pData;
     epicsTimeStamp frameTime;
-//    int numAiSamples;
     int arrayCounter;
-//    double timeStep;
     int i, a;
-//    int trgSource;
     int trgRepeat;
     int trgCount;
-//    double acquireTime;
     int ret;
 
 	sleep(1);
@@ -649,6 +654,13 @@ void SIS8300::sisTask()
 	}
 
 	I(printf("Data thread started...\n"));
+
+	ret = updateParameters();
+	if (ret) {
+		acquiring_ = 0;
+		setIntegerParam(mSISAcquire, 0);
+		goto taskStart;
+	}
 
 	trgCount = 0;
 
@@ -680,7 +692,7 @@ taskStart:
 				setIntegerParam(mSISAcquire, 0);
 			}
         }
-       
+
         /* If we are not acquiring then wait for a semaphore that is given when acquisition is started */
         if (!acquiring_) {
         	D(printf("2a Acquiring = %d..\n", acquiring_));
@@ -701,14 +713,6 @@ taskStart:
             elapsedTime_ = 0.0;
         	trgCount = 0;
         	D(printf("2c Acquiring = %d..\n", acquiring_));
-
-			ret = updateParameters();
-			if (ret) {
-				acquiring_ = 0;
-				setIntegerParam(mSISAcquire, 0);
-				goto taskStart;
-			}
-			D(printf("2d Acquiring = %d..\n", acquiring_));
 
 			ret = initDeviceDone();
 			if (ret) {
@@ -745,7 +749,7 @@ taskStart:
 
 			/* It is not an error if user requested to abort the wait.. */
 			if (ret == status_irq_release) {
-				SIS8300_INF("No error");
+				SIS8300_INF0("No error");
 			}
 
 			acquiring_ = 0;
@@ -770,11 +774,20 @@ taskStart:
 			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
+
+		ret = updateParameters();
+		if (ret) {
+			acquiring_ = 0;
+			setIntegerParam(mSISAcquire, 0);
+			goto taskStart;
+		}
+		D(printf("6 Acquiring = %d..\n", acquiring_));
+
 		callParamCallbacks(0);
 
         /* Trigger arrived */
         trgCount++;
-        D(printf("6 Acquiring = %d..\n", acquiring_));
+        D(printf("7 Acquiring = %d..\n", acquiring_));
 
         /* Get the data */
         ret = acquireArrays();
@@ -783,9 +796,9 @@ taskStart:
 			setIntegerParam(mSISAcquire, 0);
 			goto taskStart;
 		}
-		D(printf("7 Acquiring = %d..\n", acquiring_));
+		D(printf("8 Acquiring = %d..\n", acquiring_));
 
-        SIS8300_INF("No error");
+        SIS8300_INF0("No error");
 
         epicsTimeGetCurrent(&frameTime);
         getIntegerParam(NDArrayCounter, &arrayCounter);
@@ -839,7 +852,7 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
     getAddress(pasynUser, &addr);
     D(printf("Enter %d (%d) = %d\n", function, addr, value));
- 
+
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
     status = setIntegerParam(addr, function, value);
