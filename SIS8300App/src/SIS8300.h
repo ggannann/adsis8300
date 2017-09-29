@@ -50,7 +50,7 @@
 #define MAX_LOG_STR_LEN                256
 #define SIS8300_NUM_CHANNELS           10
 
-#define SIS8300_LOG(p, s, t, r) ({\
+#define SIS8300_LOG(p, s, t, r, v) ({\
 	if (t == 0) { \
 		snprintf(mSisLogStr, MAX_LOG_STR_LEN, "%s %s::%s: %s", \
 				p, driverName, __func__, s); \
@@ -61,21 +61,27 @@
 	asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, \
 			  "%s\n", mSisLogStr); \
 	setStringParam(mSISMessage, mSisLogStr); \
-	printf("%s\n", mSisLogStr); \
+	if (v) { \
+		printf("%s\n", mSisLogStr); \
+	} \
+})
+
+#define SIS8300_INF0(s) ({\
+	SIS8300_LOG("[INF]", s, 0, 0, 0); \
 })
 
 #define SIS8300_INF(s) ({\
-	SIS8300_LOG("[INF]", s, 0, 0); \
+	SIS8300_LOG("[INF]", s, 0, 0, 1); \
 })
 
 #define SIS8300_ERR(s) ({\
-	SIS8300_LOG("[ERR]", s, 0, 0); \
+	SIS8300_LOG("[ERR]", s, 0, 0, 1); \
 })
 
 #define SIS8300DRV_CALL_0(s, x) ({\
 	int __ret = x; \
 	if (__ret) {\
-		SIS8300_LOG("[ERR]", s, 1, __ret); \
+		SIS8300_LOG("[ERR]", s, 1, __ret, 1); \
 	} \
 	__ret; \
 })
