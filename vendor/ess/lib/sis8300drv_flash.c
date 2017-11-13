@@ -643,7 +643,12 @@ int sis8300drv_flash_write_page(sis8300drv_dev *sisdevice, unsigned offset, unsi
     }
         
     /* Pipe data in. */
-    for (iter = 0; iter < size; iter++) {      
+    for (iter = 0; iter < size; iter++) {
+    	/* Create a small delay.. */
+        int j,g;
+        double h=3.1433354,k=688.222;
+        for (j=0;j<100;j++) { g = h * j + k; } j = g;
+
         ui32_reg_val = (uint32_t)((uint8_t *)data)[iter];     
         status = sis8300_reg_write(sisdevice->handle, SIS8300_FLASH_SPI_REG, 
                 FLASH_SPI_WR_BLK_FILL | ui32_reg_val);
