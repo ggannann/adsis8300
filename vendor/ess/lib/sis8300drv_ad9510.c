@@ -514,6 +514,8 @@ int sis8300drv_ad9510_spi_setup(sis8300drv_dev *sisdevice,
     return status_success;
 }
 
+#if 0
+/* this is for debugging purposes */
 /* For AD9510 debugging purposes.. */
 int sis8300drv_ad9510_spi_dump(sis8300drv_dev *sisdevice,
         unsigned *ch_divider_configuration_array,
@@ -543,3 +545,5 @@ int sis8300drv_ad9510_spi_dump(sis8300drv_dev *sisdevice,
 
 	return status_success;
 }
+#endif
+
