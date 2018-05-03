@@ -4,3 +4,7 @@ $(P)$(R)ConvOffset
 $(P)$(R)Attenuation
 $(P)$(R)DecimFactor
 $(P)$(R)DecimOffset
+$(P)$(R)IntTrigLength
+$(P)$(R)IntTrigCond
+$(P)$(R)IntTrigOff
+$(P)$(R)IntTrigOn

@@ -6,6 +6,7 @@
 #include <linux/mm.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
 #include <asm/io.h>
 
 #include "sis8300.h"
@@ -55,7 +56,12 @@ static void sis8300_vm_close(struct vm_area_struct *vma) {
  * All pages that were mapped to userspace have already been allocated so this
  * should never happen.
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0)
 static int sis8300_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmfm) {
+#else
+static int sis8300_vm_fault(struct vm_fault *vmf) {
+    struct vm_area_struct *vma = vmf->vma;
+#endif
     sis8300_usr *sisusr = vma->vm_private_data;
     sis8300_dev *sisdevice = sisusr->sisdevice;
     

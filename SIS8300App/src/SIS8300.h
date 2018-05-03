@@ -45,6 +45,10 @@
 #define SisRTMTemp2String              "SIS_RTM_TEMP2"
 #define SisHarlinkString               "SIS_HARLINK"
 #define SisUpdateParametersString      "SIS_UPDATE_PARAMETERS"
+#define SisIntTrigLengthString         "SIS_INT_TRIG_LENGTH"
+#define SisIntTrigCondString           "SIS_INT_TRIG_COND"
+#define SisIntTrigOffString            "SIS_INT_TRIG_OFF"
+#define SisIntTrigOnString             "SIS_INT_TRIG_ON"
 
 #define MAX_PATH_LEN                   32
 #define MAX_LOG_STR_LEN                256
@@ -127,7 +131,7 @@
 class epicsShareClass SIS8300 : public asynNDArrayDriver {
 public:
 	SIS8300(const char *portName, const char *devicePath,
-			int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
+			int maxAddr, int numAiSamples, NDDataType_t dataType,
 			int maxBuffers, size_t maxMemory, int priority, int stackSize);
 	virtual ~SIS8300();
 
@@ -167,8 +171,10 @@ protected:
     int mSISRTMTemp2;
     int mSISHarlink;
     int mSISUpdateParameters;
-
-    #define SIS8300_LAST_PARAM mSISUpdateParameters
+    int mSISIntTrigLength;
+    int mSISIntTrigCond;
+    int mSISIntTrigOff;
+    int mSISIntTrigOn;
 
     /* These are the methods that are new to this class */
     int acquireRawArrays();
@@ -177,8 +183,6 @@ protected:
     void setAcquire(int value);
     virtual int initDevice();
     virtual int destroyDevice();
-    virtual int enableChannel(unsigned int channel);
-    virtual int disableChannel(unsigned int channel);
     virtual int initDeviceDone();
     virtual int armDevice();
     virtual int disarmDevice();
@@ -204,6 +208,11 @@ private:
 
     char mSisDevicePath[MAX_PATH_LEN];
     unsigned int mSisFirmwareOptions;
-};
 
-#define SIS8300_NUM_PARAMS ((int)(&SIS8300_LAST_PARAM - &SIS8300_FIRST_PARAM + 1))
+    bool mDoTriggerClockUpdate;
+    bool mDoIntTriggerUpdate;
+    bool mDoChannelMaskUpdate;
+    bool mDoNumSamplesUpdate;
+    bool mDoHarlinkUpdate;
+    bool mDoAttenuationUpdate;
+};

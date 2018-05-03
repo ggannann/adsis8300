@@ -58,7 +58,6 @@ static void sisTaskC(void *drvPvt)
   * \param[in] portName The name of the asyn port driver to be created.
   * \param[in] devicePath The path to the /dev entry.
   * \param[in] maxAddr The maximum  number of asyn addr addresses this driver supports. 1 is minimum.
-  * \param[in] numParams The number of parameters in the derived class.
   * \param[in] numAiSamples The initial number of AI samples.
   * \param[in] dataType The initial data type (NDDataType_t) of the arrays that this driver will create.
   * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is
@@ -69,12 +68,11 @@ static void sisTaskC(void *drvPvt)
   * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
   */
 SIS8300::SIS8300(const char *portName, const char *devicePath,
-		int maxAddr, int numParams, int numAiSamples, NDDataType_t dataType,
+		int maxAddr, int numAiSamples, NDDataType_t dataType,
 		int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : asynNDArrayDriver(portName,
     		maxAddr,
-			SIS8300_NUM_PARAMS+numParams,
 			maxBuffers, maxMemory,
     		asynFloat32ArrayMask | asynUInt32DigitalMask,
 			asynFloat32ArrayMask | asynUInt32DigitalMask,
@@ -87,7 +85,7 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
 {
     int status = asynSuccess;
 
-    D(printf("%d addresses, %d parameters\n", maxAddr, SIS8300_NUM_PARAMS+numParams));
+    D(printf("%d addresses\n", maxAddr));
 
     mRawDataArray = NULL;
     mNumArrays = 2;
@@ -140,6 +138,10 @@ SIS8300::SIS8300(const char *portName, const char *devicePath,
     createParam(SisRTMTempGetString,            asynParamInt32, &mSISRTMTempGet);
     createParam(SisHarlinkString,               asynParamInt32, &mSISHarlink);
     createParam(SisUpdateParametersString,      asynParamInt32, &mSISUpdateParameters);
+    createParam(SisIntTrigLengthString,         asynParamInt32, &mSISIntTrigLength);
+    createParam(SisIntTrigCondString,           asynParamInt32, &mSISIntTrigCond);
+    createParam(SisIntTrigOffString,            asynParamInt32, &mSISIntTrigOff);
+    createParam(SisIntTrigOnString,             asynParamInt32, &mSISIntTrigOn);
 
     status |= setIntegerParam(mSISNumAiSamples, numAiSamples);
     status |= setIntegerParam(NDDataType, dataType);
@@ -271,20 +273,6 @@ int SIS8300::destroyDevice()
 	return ret;
 }
 
-int SIS8300::enableChannel(unsigned int channel)
-{
-   	mChannelMask |= (1 << channel);
-    D(printf("channel mask %X\n", mChannelMask));
-	return 0;
-}
-
-int SIS8300::disableChannel(unsigned int channel)
-{
-   	mChannelMask &= ~(1 << channel);
-    D(printf("channel mask %X\n", mChannelMask));
-	return 0;
-}
-
 int SIS8300::initDeviceDone()
 {
 	int ret = 0;
@@ -355,101 +343,129 @@ int SIS8300::deviceDone()
 
 int SIS8300::updateParameters()
 {
-	int iVal;
-	double dVal;
-	bool changed;
-	unsigned int channelMask;
-	int RTMType;
-
 	D(printf("Enter\n"));
 
-	getIntegerParam(mSISRTMType, &RTMType);
+	/* Handle trigger and clock parameters. */
+	if (mDoTriggerClockUpdate) {
+		int clockSrc;
+	    getIntegerParam(mSISClockSource, &clockSrc);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_clock_source",
+   				sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)clockSrc));
 
-	isParamValueNew(mSISClockSource, &changed);
-	if (changed) {
-	    getIntegerParam(mSISClockSource, &iVal);
-   		SIS8300DRV_CALL_RET("sis8300drv_set_clock_source", sis8300drv_set_clock_source(mSisDevice, (sis8300drv_clk_src)iVal));
-   		clearParamValueNew(mSISClockSource);
-	}
+		int clockDiv;
+		getIntegerParam(mSISClockDiv, &clockDiv);
+		SIS8300DRV_CALL_RET("sis8300drv_set_clock_divider",
+				sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)clockDiv));
 
-	isParamValueNew(mSISClockDiv, &changed);
-	if (changed) {
-		getIntegerParam(mSISClockDiv, &iVal);
-		SIS8300DRV_CALL_RET("sis8300drv_set_clock_divider", sis8300drv_set_clock_divider(mSisDevice, (sis8300drv_clk_div)iVal));
-   		clearParamValueNew(mSISClockDiv);
-	}
+		int trigSrc;
+	    getIntegerParam(mSISTrigSource, &trigSrc);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_trigger_source",
+   				sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)trigSrc));
 
-	isParamValueNew(mSISTrigSource, &changed);
-	if (changed) {
-	    getIntegerParam(mSISTrigSource, &iVal);
-   		SIS8300DRV_CALL_RET("sis8300drv_set_trigger_source", sis8300drv_set_trigger_source(mSisDevice, (sis8300drv_trg_src)iVal));
-   		clearParamValueNew(mSISTrigSource);
-	}
-
-	isParamValueNew(mSISTrigLine, &changed);
-	if (changed) {
-	    getIntegerParam(mSISTrigLine, &iVal);
+   		if ((sis8300drv_trg_src)trigSrc == trg_src_external) {
+			int trigLine;
+			getIntegerParam(mSISTrigLine, &trigLine);
 		sis8300drv_trg_ext trgext = trg_ext_harlink;
-		unsigned int trgmask = (1 << iVal);
-		if (iVal >= SIS8300DRV_NUM_FP_TRG) {
+			unsigned int trgmask = (1 << trigLine);
+			if (trigLine >= SIS8300DRV_NUM_FP_TRG) {
 			trgext = trg_ext_mlvds;
-			trgmask = (1 << (iVal - SIS8300DRV_NUM_FP_TRG));
+				trgmask = (1 << (trigLine - SIS8300DRV_NUM_FP_TRG));
 		}
-   		SIS8300DRV_CALL_RET("sis8300drv_set_external_setup", sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
-   		clearParamValueNew(mSISTrigLine);
+			SIS8300DRV_CALL_RET("sis8300drv_set_external_setup",
+					sis8300drv_set_external_setup(mSisDevice, trgext, trgmask, 0));
 	}
 
-	isParamValueNew(mSISTrigDelay, &changed);
-	if (changed) {
-	    getIntegerParam(mSISTrigDelay, &iVal);
-   		SIS8300DRV_CALL_RET("sis8300drv_set_npretrig", sis8300drv_set_npretrig(mSisDevice, iVal));
-   		clearParamValueNew(mSISTrigDelay);
+		int trigDelay;
+	    getIntegerParam(mSISTrigDelay, &trigDelay);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_npretrig",
+   				sis8300drv_set_npretrig(mSisDevice, trigDelay));
+
+   		mDoTriggerClockUpdate = false;
 	}
 
-	isParamValueNew(mSISNumAiSamples, &changed);
-	if (changed) {
-	    getIntegerParam(mSISNumAiSamples, &iVal);
-   		SIS8300DRV_CALL_RET("sis8300drv_set_nsamples", sis8300drv_set_nsamples(mSisDevice, iVal));
-   		clearParamValueNew(mSISNumAiSamples);
+	/* Update number of samples to acquire. */
+	if (mDoNumSamplesUpdate) {
+		int numSamples;
+	    getIntegerParam(mSISNumAiSamples, &numSamples);
+   		SIS8300DRV_CALL_RET("sis8300drv_set_nsamples",
+   				sis8300drv_set_nsamples(mSisDevice, numSamples));
+
+		mDoNumSamplesUpdate = false;
 	}
 
-	channelMask = mChannelMask;
+	/* Enable / disable channels. */
+	if (mDoChannelMaskUpdate) {
+		unsigned int channelMask = mChannelMask;
+		int tmp;
 	for (int addr = 0; addr < SIS8300_NUM_CHANNELS; addr++) {
-		isParamValueNew(addr, mSISEnable, &changed);
-		if (changed) {
-			getIntegerParam(addr, mSISEnable, &iVal);
-			if (iVal) {
-				enableChannel(addr);
+			getIntegerParam(addr, mSISEnable, &tmp);
+			if (tmp) {
+				mChannelMask |= (1 << addr);
 			} else {
-				disableChannel(addr);
-			}
-			clearParamValueNew(addr, mSISEnable);
+				mChannelMask &= ~(1 << addr);
 		}
 	}
 	if (channelMask != mChannelMask) {
-		SIS8300DRV_CALL_RET("sis8300drv_set_channel_mask", sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
+			SIS8300DRV_CALL_RET("sis8300drv_set_channel_mask",
+					sis8300drv_set_channel_mask(mSisDevice, mChannelMask));
 	}
 
-	isParamValueNew(mSISHarlink, &changed);
-	if (changed) {
-		/* This will reset the value since it can only be 1 or 0. */
+		mDoChannelMaskUpdate = false;
+	}
+
+	/* Update Harlink outputs. */
+	if (mDoHarlinkUpdate) {
+		int val;
+		getIntegerParam(mSISHarlink, &val);
+		/* This will reset the PV value since it can only be 1 or 0. */
 	    setIntegerParam(mSISHarlink, 0);
-   		SIS8300DRV_CALL_RET("sis8300drv_write_harlink", sis8300drv_write_harlink(mSisDevice, iVal));
-   		clearParamValueNew(mSISHarlink);
+   		SIS8300DRV_CALL_RET("sis8300drv_write_harlink",
+   				sis8300drv_write_harlink(mSisDevice, val));
+
+   		mDoHarlinkUpdate = false;
 	}
 
+	/* Update attenuator values. */
+	if (mDoAttenuationUpdate) {
+		int RTMType;
+		int val;
+		double attn;
+		getIntegerParam(mSISRTMType, &RTMType);
 	/* Only DWC8VM1 and DWC8300-LF have attenuators */
 	if (((sis8300drv_rtm)RTMType == rtm_dwc8vm1) ||
 			((sis8300drv_rtm)RTMType == rtm_dwc8300lf)) {
 		for (int addr = 0; addr < SIS8300_NUM_CHANNELS; addr++) {
-			isParamValueNew(addr, mSISAttenuation, &changed);
-			if (changed) {
-				getDoubleParam(addr, mSISAttenuation, &dVal);
-				iVal = (int)((dVal + 31.5) * 2);
-				SIS8300DRV_CALL_RET("sis8300drv_i2c_rtm_attenuator_set", sis8300drv_i2c_rtm_attenuator_set(mSisDevice, (sis8300drv_rtm)RTMType, addr, iVal));
-				clearParamValueNew(addr, mSISAttenuation);
+				getDoubleParam(addr, mSISAttenuation, &attn);
+				val = (int)((attn + 31.5) * 2);
+				SIS8300DRV_CALL_RET("sis8300drv_i2c_rtm_attenuator_set",
+						sis8300drv_i2c_rtm_attenuator_set(mSisDevice,
+						(sis8300drv_rtm)RTMType, addr, val));
 			}
 		}
+
+		mDoAttenuationUpdate = false;
+	}
+
+	/* Handle internal threshold trigger parameters. */
+	/* NOTE: Only threshold triggering is supported at the moment, FIR filter
+	 *       is not handled. */
+	if (mDoIntTriggerUpdate) {
+		int thrOff, thrOn, cond, len;
+		for (int addr = 0; addr < SIS8300_NUM_CHANNELS; addr++) {
+			getIntegerParam(addr, mSISIntTrigLength, &len);
+			getIntegerParam(addr, mSISIntTrigCond, &cond);
+			getIntegerParam(addr, mSISIntTrigOff, &thrOff);
+			getIntegerParam(addr, mSISIntTrigOn, &thrOn);
+			thrOff &= 0xFFFF;
+			thrOn &= 0xFFFF;
+			cond &= 0x1;
+			len &= 0xFF;
+			SIS8300DRV_CALL_RET("sis8300drv_set_internal_setup",
+					sis8300drv_set_internal_setup(mSisDevice, addr, 1, 0,
+					thrOff << 16 | thrOn, cond, len, 0, 0));
+		}
+
+		mDoIntTriggerUpdate = false;
 	}
 
     SIS8300_INF0("No error");
@@ -470,7 +486,7 @@ int SIS8300::acquireRawArrays()
     size_t dims[2];
     int numAiSamples;
     epicsUInt16 *pRaw, *pChRaw;
-    int aich, i;
+    int aich;
 
 	D(printf("Enter\n"));
 
@@ -501,7 +517,7 @@ int SIS8300::acquireRawArrays()
 //		sprintf(fname, "/tmp/raw_%d.txt", aich);
 //		FILE *fp = fopen(fname, "w");
 		D(printf("CH %d [%d]: ", aich, numAiSamples));
-//		for (i = 0; i < numAiSamples; i++) {
+//		for (int i = 0; i < numAiSamples; i++) {
 //			printf("%u ", *(pChRaw + i));
 //		fprintf(fp, "%u\n", *(pChRaw + i));
 //		}
@@ -899,6 +915,23 @@ asynStatus SIS8300::writeInt32(asynUser *pasynUser, epicsInt32 value)
 				status = asynError;
 			}
 		}
+    } else if (function == mSISTrigSource ||
+    		function == mSISTrigDelay ||
+			function == mSISTrigLine ||
+			function == mSISClockSource ||
+			function == mSISClockDiv) {
+    	mDoTriggerClockUpdate = true;
+    } else if (function == mSISIntTrigLength ||
+    		function == mSISIntTrigCond ||
+			function == mSISIntTrigOff ||
+			function == mSISIntTrigOn) {
+    	mDoIntTriggerUpdate = true;
+    } else if (function == mSISEnable) {
+    	mDoChannelMaskUpdate = true;
+    } else if (function == mSISNumAiSamples) {
+    	mDoNumSamplesUpdate = true;
+    } else if (function == mSISHarlink) {
+    	mDoHarlinkUpdate = true;
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < SIS8300_FIRST_PARAM) {
@@ -1003,7 +1036,6 @@ extern "C" int SIS8300Config(const char *portName, const char *devicePath,
 {
     new SIS8300(portName, devicePath,
     		maxAddr,
-			0,
     		numAiSamples,
 			(NDDataType_t)dataType,
 			(maxBuffers < 0) ? 0 : maxBuffers,

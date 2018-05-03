@@ -3,6 +3,7 @@
  */
 
 #include <linux/fs.h>
+#include <linux/uaccess.h>
 #include <asm/uaccess.h>
 
 #include "sis8300.h"

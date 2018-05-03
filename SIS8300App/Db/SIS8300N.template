@@ -125,3 +125,74 @@ record(longin, "$(P)$(R)DecimOffset_RBV")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_DECIM_OFFSET")
     field(SCAN, "I/O Intr")
 }
+
+record(longout, "$(P)$(R)IntTrigLength")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_LENGTH")
+    field(DRVL, "0")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)IntTrigLength_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_LENGTH")
+    field(SCAN, "I/O Intr")
+}
+
+record(bo, "$(P)$(R)IntTrigCond")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_COND")
+    field(ZNAM, "LT")
+    field(ONAM, "GT")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(bi, "$(P)$(R)IntTrigCond_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_COND")
+    field(SCAN, "I/O Intr")
+    field(ZNAM, "LT")
+    field(ONAM, "GT")
+}
+
+record(longout, "$(P)$(R)IntTrigOff")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_OFF")
+    field(DRVL, "0")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)IntTrigOff_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_OFF")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)IntTrigOn")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_ON")
+    field(DRVL, "0")
+    field(VAL,  "0")
+    info(autosaveFields, "VAL")
+}
+
+record(longin, "$(P)$(R)IntTrigOn_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))SIS_INT_TRIG_ON")
+    field(SCAN, "I/O Intr")
+}
